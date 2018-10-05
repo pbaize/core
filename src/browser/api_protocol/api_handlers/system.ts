@@ -16,6 +16,7 @@ import {
     NackerErrorString,
     StartManifest
 } from '../../../shapes';
+const namedMutex = require('electron').namedMutex;
 
 const successAck: APIPayloadAck = { success: true };
 
@@ -102,11 +103,27 @@ export const SystemApiMap: APIHandlerMap = {
     'terminate-external-process': { apiFunc: terminateExternalProcess, apiPath: '.terminateExternalProcess' },
     'update-proxy': updateProxy,
     'view-log': { apiFunc: viewLog, apiPath: '.getLog' },
-    'write-to-log': writeToLog
+    'write-to-log': writeToLog,
+    'try-lock': tryLock,
+    'release-lock': releaseLock
 };
 
 export function init(): void {
     registerActionMap(SystemApiMap, 'System');
+}
+function tryLock(id: any, message: any, ack: any) {
+   const {payload} = message;
+   const lock = namedMutex.tryLock(payload);
+   const dataAck = Object.assign({}, successAck);
+   dataAck.data = lock;
+   ack(dataAck);
+}
+function releaseLock(id: any, message: any, ack: any) {
+    const {payload} = message;
+    const lock = namedMutex.releaseLock(payload);
+    const dataAck = Object.assign({}, successAck);
+    dataAck.data = lock;
+    ack(dataAck);
 }
 
 function didFail(e: any): boolean {
