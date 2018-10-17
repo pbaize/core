@@ -315,7 +315,12 @@ function runApplication(identity, message, ack, nack) {
         className: 'window',
         eventName: 'fire-constructor-callback'
     };
+<<<<<<< HEAD
     if (coreState.getAppRunningState(uuid) || (locals && locals.duplicateUuidRun)) {
+=======
+    
+    if (coreState.getAppRunningState(uuid)) {
+>>>>>>> added nack (#569)
         Application.emitRunRequested(appIdentity);
         nack(`Application with specified UUID is already running: ${uuid}`);
         return;
