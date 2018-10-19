@@ -1339,7 +1339,12 @@ Window.getSnapshot = (opts) => {
             return browserWindow.capturePage(callback);
         }
 
+<<<<<<< HEAD
         if (!area ||
+=======
+        if (
+            !area ||
+>>>>>>> 9a325ab50751ea63176283f3daad2492cf50f5df
             typeof area !== 'object' ||
             typeof area.x !== 'number' ||
             typeof area.y !== 'number' ||
