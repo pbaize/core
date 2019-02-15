@@ -47,6 +47,7 @@ import {
     ERROR_BOX_TYPES,
     showErrorBox
 } from '../../common/errors';
+import { addBrowserViewToWindow } from './browserView';
 
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
@@ -378,6 +379,11 @@ let optionSetters = {
     hasLoaded: function(newVal, browserWin) {
         if (typeof(newVal) === 'boolean') {
             browserWin._options.hasLoaded = newVal;
+        }
+    },
+    browserView: function(newVal, browserWin) {
+        if (newVal !== null) {
+            addBrowserViewToWindow(newVal, browserWin);
         }
     },
     showTaskbarIcon: function(newVal, browserWin) {
@@ -1805,15 +1811,13 @@ Window.defineDraggableArea = function() {};
 Window.updateOptions = function(identity, updateObj) {
     let browserWindow = getElectronBrowserWindow(identity, 'update settings for');
 
-    try {
-        for (var opt in updateObj) {
-            if (optionSetters[opt]) {
-                optionSetters[opt](updateObj[opt], browserWindow);
-            }
+
+    for (var opt in updateObj) {
+        if (optionSetters[opt]) {
+            optionSetters[opt](updateObj[opt], browserWindow);
         }
-    } catch (e) {
-        console.log(e.message);
     }
+
 };
 
 Window.exists = function(identity) {
