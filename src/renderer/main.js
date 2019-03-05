@@ -41,6 +41,7 @@ const api = (windowId, initialOptions) => {
     const { uuid, name } = mainWindowOptions;
     windowOptionSet.runtimeArguments = JSON.stringify(coreState.args);
     windowOptionSet.licenseKey = coreState.getManifest({ uuid, name }).licenseKey;
+    windowOptionSet.winId = windowId;
 
     return [
         `global.__startOptions = ${JSON.stringify(windowOptionSet)}`,

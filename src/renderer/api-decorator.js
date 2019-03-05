@@ -43,6 +43,7 @@
     // The following will check whether it is an iframe and update
     // entity information accordingly
     const frameInfo = frames.find(e => e.frameRoutingId === renderFrameId);
+    // console.log(glbl.__startOptions);
     const entityInfo = isMainFrame || enableDeprecatedSharedName ? glbl.__startOptions.entityInfo : frameInfo;
     const decorateOpen = !runtimeArguments.includes('--native-window-open');
 
@@ -223,6 +224,7 @@
     }
 
     function raiseReadyEvents(entityInfo) {
+        console.log(entityInfo);
         const { uuid, name, parent, entityType } = entityInfo;
         const winIdentity = { uuid, name };
         const parentFrameName = parent.name || name;

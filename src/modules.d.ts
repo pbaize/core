@@ -22,6 +22,10 @@ declare namespace Electron {
         setMinLogLevel(level: number): void;
         vlog(level: number, message: any, thirdArg?: any): any;
     }
+    namespace fileLock {
+    export function tryLock (key: string): number;
+    export function releaseLock(key: string): number;
+    }
     namespace windowTransaction {
         export class Transaction {
             on(arg0: string, arg1: (event: any, payload: any) => void): any;
