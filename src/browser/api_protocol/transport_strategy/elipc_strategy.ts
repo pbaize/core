@@ -3,6 +3,7 @@ import { ApiTransportBase, MessagePackage, MessageConfiguration } from './api_tr
 import { default as RequestHandler } from './base_handler';
 import { Endpoint, ActionMap } from '../shapes';
 import { Identity } from '../../../shapes';
+import { WebContents } from 'electron';
 declare var require: any;
 
 const coreState = require('../../core_state');
@@ -100,8 +101,12 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
     private innerSend(payload: string,
                       frameRoutingId: number,
                       mainFrameRoutingId: number,
-                      browserWindow: any): void {
-        if (frameRoutingId === mainFrameRoutingId) {
+                      browserWindow: any,
+                      webContents: any,
+                      type?: string): void {
+        if (type === 'view') {
+            webContents.sendToFrame(frameRoutingId, electronIpc.channels.CORE_MESSAGE, payload);
+        } else if (frameRoutingId === mainFrameRoutingId) {
             // this is the main window frame
             if (coreState.argo.framestrategy === 'frames') {
                 browserWindow.webContents.sendToFrame(frameRoutingId, electronIpc.channels.CORE_MESSAGE, payload);
@@ -133,7 +138,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
         if (!this.canTrySend(routingInfo)) {
             system.debugLog(1, `uuid:${uuid} name:${name} frameRoutingId:${frameRoutingId} not reachable, payload:${payload}`);
         } else {
-            this.innerSend(payload, frameRoutingId, mainFrameRoutingId, browserWindow);
+            this.innerSend(payload, frameRoutingId, mainFrameRoutingId, browserWindow, routingInfo.webContents, routingInfo.type);
         }
     }
 

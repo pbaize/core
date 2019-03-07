@@ -54,9 +54,13 @@ const api = (windowId, initialOptions) => {
 
 module.exports.api = api;
 
-module.exports.apiWithOptions = (windowId) => {
+module.exports.apiWithOptions = (windowId, contentsId) => {
     const initialOptions = coreState.getWindowInitialOptionSet(windowId);
-
+    const entityInfo = coreState.getIdentityByWebcontentsId(windowId, contentsId);
+    if (entityInfo) {
+        Object.assign(initialOptions.options, entityInfo);
+        initialOptions.entityInfo = entityInfo;
+    }
     // break the remote link
     return JSON.stringify({
         apiString: api(windowId, initialOptions),

@@ -740,6 +740,8 @@ export function getInfoByUuidFrame(targetIdentity: Shapes.Identity): Shapes.Fram
                 };
             } else if (openfinWindow.frames.get(frame)) {
                 return openfinWindow.frames.get(frame);
+            } else if (openfinWindow.views.has(frame)) {
+                 return openfinWindow.views.get(frame).info;
             }
         } else {
             writeToLog(1, `unable to find openfinWindow of child of ${app.uuid}`, true);
@@ -775,6 +777,7 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
                 return {
                     name,
                     browserWindow,
+                    webContents: browserWindow.webContents,
                     frameRoutingId: openfinWindow.mainFrameRoutingId,
                     mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
                     frameName: name
@@ -784,9 +787,21 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
                 return {
                     name,
                     browserWindow,
+                    webContents: browserWindow.webContents,
                     frameRoutingId,
                     mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
                     frameName: name
+                };
+            } else if (openfinWindow.views.has(frame)) {
+                const view = openfinWindow.views.get(frame);
+                return {
+                   name: frame,
+                   browserWindow,
+                   webContents: view.view.webContents,
+                   frameRoutingId: view.view.webContents.mainFrameRoutingId,
+                   mainFrameRoutingId: view.view.webContents.mainFrameRoutingId,
+                   frameName: frame,
+                   type: 'view'
                 };
             }
         } else {
@@ -814,4 +829,17 @@ export function getWindowInitialOptionSet(windowId: number): Shapes.WindowInitia
         socketServerState,
         frames: Array.from(ofWin.frames.values())
     };
+}
+export function getIdentityByWebcontentsId(mainWindowId: number, contentsId: number) {
+    const win = getWinObjById(mainWindowId);
+    if (win) {
+        if (win.browserWindow.webContents.id === contentsId) {
+           return getEntityInfo({uuid: win.uuid, name: win.name});
+        } else {
+            const view = Array.from(win.views).find(([_, v]) => v.view.webContents.id === contentsId);
+            if (view) {
+                return view[1].info;
+            }
+        }
+    }
 }

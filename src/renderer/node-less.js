@@ -28,7 +28,9 @@ process.versions.mainFrameRoutingId = electron.ipcRenderer.getFrameRoutingID();
 process.versions.cachePath = electron.remote.app.getPath('userData');
 
 const mainWindowId = electron.remote.getCurrentWindow(process.versions.mainFrameRoutingId).id;
-const apiInfo = electron.remote.require('./src/renderer/main').apiWithOptions(mainWindowId);
+const contentsId = electron.remote.getCurrentWebContents(process.versions.mainFrameRoutingId).id;
+console.log(mainWindowId, contentsId);
+const apiInfo = electron.remote.require('./src/renderer/main').apiWithOptions(mainWindowId, contentsId);
 const { apiString, initialOptions } = JSON.parse(apiInfo);
 
 // let chromiumWindowAlertEnabled = electron.remote.app.getCommandLineArguments().includes('--enable-chromium-window-alert');

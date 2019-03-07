@@ -889,6 +889,7 @@ Window.create = function(id, opts) {
         _options,
         id,
         browserWindow,
+        views: new Map(),
         groupUuid,
         hideReason,
         hideOnCloseListener,

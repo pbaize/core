@@ -68,6 +68,7 @@ export class RuntimeProxyWindow {
             hideReason: '',
             id: 0,
             name,
+            views: new Map(),
             preloadScripts: new Array<PreloadScriptState>(),
             uuid,
             mainFrameRoutingId: 0,

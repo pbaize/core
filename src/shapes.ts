@@ -1,8 +1,9 @@
 
 import { PortInfo } from './browser/port_discovery';
-import { BrowserWindow as BrowserWindowElectron } from 'electron';
+import { BrowserWindow as BrowserWindowElectron, BrowserView } from 'electron';
 import { ERROR_BOX_TYPES } from './common/errors';
 import { AnchorType } from '../js-adapter/src/shapes';
+import { checkServerIdentity } from 'tls';
 
 export interface Identity {
     uuid: string;
@@ -21,7 +22,7 @@ export interface ResourceFetchIdentity extends Identity {
     resourceFetch?: boolean;
 }
 
-export type EntityType = 'window' | 'iframe' | 'external connection' | 'unknown';
+export type EntityType = 'window' | 'iframe' | 'external connection' | 'unknown' | 'view';
 export type AuthCallback = (username: string, password: string) => void;
 export type Listener = (...args: any[]) => void;
 
@@ -101,12 +102,17 @@ export interface OpenFinWindow {
     forceClose: boolean;
     groupUuid: string|null;
     hideReason: string;
+    views: Map<string, OfBrowserView>;
     id: number;
     name: string;
     preloadScripts: PreloadScriptState[];
     uuid: string;
     mainFrameRoutingId: number;
     isProxy?: boolean;
+}
+export interface OfBrowserView {
+    info: FrameInfo;
+    view: BrowserView;
 }
 
 export interface BrowserWindow extends BrowserWindowElectron {

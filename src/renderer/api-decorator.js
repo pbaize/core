@@ -11,7 +11,7 @@
     const isMainFrame = glbl.isMainFrame;
     let renderFrameId = glbl.routingId;
     let customData = glbl.getFrameData(renderFrameId);
-
+    console.log(glbl.routingId);
     const electron = require('electron');
 
     // Mock webFrame if unavailable
@@ -43,7 +43,7 @@
     // The following will check whether it is an iframe and update
     // entity information accordingly
     const frameInfo = frames.find(e => e.frameRoutingId === renderFrameId);
-    // console.log(glbl.__startOptions);
+    console.log(glbl.__startOptions);
     const entityInfo = isMainFrame || enableDeprecatedSharedName ? glbl.__startOptions.entityInfo : frameInfo;
     const decorateOpen = !runtimeArguments.includes('--native-window-open');
 
