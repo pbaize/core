@@ -169,6 +169,9 @@ let optionSetters = {
     },
     frame: function(newVal, browserWin) {
         let frameBool = !!newVal;
+        const uuid = browserWin._options.uuid;
+        const name = browserWin._options.name;
+        const openfinWindow = Window.wrap(uuid, name);
         const prevBool = getOptFromBrowserWin('frame', browserWin, true);
         setOptOnBrowserWin('frame', frameBool, browserWin);
         browserWin.setHasFrame(frameBool);
@@ -176,7 +179,7 @@ let optionSetters = {
             const maxWidth = getOptFromBrowserWin('maxWidth', browserWin, -1);
             const maxHeight = getOptFromBrowserWin('maxHeight', browserWin, -1);
             if (maxWidth !== -1 || maxHeight !== -1) {
-                browserWin.setMaximumSize(maxWidth, maxHeight);
+                if (!openfinWindow && openfinWindow.groupUuid) { browserWin.setMaximumSize(maxWidth, maxHeight); }
                 const { width, height, x, y } = browserWin.getBounds();
                 const setMaxWidth = maxWidth === -1 ? Number.MAX_SAFE_INTEGER : maxWidth;
                 const setMaxHeight = maxHeight === -1 ? Number.MAX_SAFE_INTEGER : maxHeight;
@@ -185,7 +188,7 @@ let optionSetters = {
             const minWidth = getOptFromBrowserWin('minWidth', browserWin, 0);
             const minHeight = getOptFromBrowserWin('minHeight', browserWin, 0);
             if (minWidth !== 0 || minHeight !== 0) {
-                browserWin.setMinimumSize(minWidth, minHeight);
+                if (!openfinWindow && openfinWindow.groupUuid) { browserWin.setMinimumSize(minWidth, minHeight); }
                 const { width, height, x, y } = browserWin.getBounds();
                 browserWin.setBounds({ width: Math.max(width, minWidth), height: Math.max(height, minHeight), x, y });
             }
@@ -271,14 +274,22 @@ let optionSetters = {
     },
     maxHeight: function(newVal, browserWin) {
         var maxWidth = getOptFromBrowserWin('maxWidth', browserWin, -1);
-
-        browserWin.setMaximumSize(maxWidth, newVal);
+        const uuid = browserWin._options.uuid;
+        const name = browserWin._options.name;
+        const openfinWindow = Window.wrap(uuid, name);
+        if (!openfinWindow.groupUuid) {
+            browserWin.setMaximumSize(maxWidth, newVal);
+        }
         setOptOnBrowserWin('maxHeight', newVal, browserWin);
     },
     maxWidth: function(newVal, browserWin) {
         var maxHeight = getOptFromBrowserWin('maxHeight', browserWin, -1);
-
-        browserWin.setMaximumSize(newVal, maxHeight);
+        const uuid = browserWin._options.uuid;
+        const name = browserWin._options.name;
+        const openfinWindow = Window.wrap(uuid, name);
+        if (!openfinWindow.groupUuid) {
+            browserWin.setMaximumSize(newVal, maxHeight);
+        }
         setOptOnBrowserWin('maxWidth', newVal, browserWin);
     },
     maximizable: function(newVal, browserWin) {
@@ -295,14 +306,22 @@ let optionSetters = {
     },
     minHeight: function(newVal, browserWin) {
         var minWidth = getOptFromBrowserWin('minWidth', browserWin, -1);
-
-        browserWin.setMinimumSize(minWidth, newVal);
+        const uuid = browserWin._options.uuid;
+        const name = browserWin._options.name;
+        const openfinWindow = Window.wrap(uuid, name);
+        if (!openfinWindow.groupUuid) {
+            browserWin.setMinimumSize(minWidth, newVal);
+        }
         setOptOnBrowserWin('minHeight', newVal, browserWin);
     },
     minWidth: function(newVal, browserWin) {
         var minHeight = getOptFromBrowserWin('minHeight', browserWin, -1);
-
-        browserWin.setMinimumSize(newVal, minHeight);
+        const uuid = browserWin._options.uuid;
+        const name = browserWin._options.name;
+        const openfinWindow = Window.wrap(uuid, name);
+        if (!openfinWindow.groupUuid) {
+            browserWin.setMinimumSize(newVal, minHeight);
+        }
         setOptOnBrowserWin('minWidth', newVal, browserWin);
     },
     opacity: function(newVal, browserWin) {

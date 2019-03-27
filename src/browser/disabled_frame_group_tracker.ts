@@ -252,6 +252,13 @@ export function getGroupInfoCacheForWindow(win: OpenFinWindow): GroupInfo {
 
 export function addWindowToGroup(win: OpenFinWindow) {
     win.browserWindow.setUserMovementEnabled(false);
+    //Check for size constraints, remove them
+    if (win.browserWindow._options.maxHeight || win.browserWindow._options.maxWidth) {
+        win.browserWindow.setMaximumSize(Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
+    }
+    if (win.browserWindow._options.minHeight || win.browserWindow._options.minHeight) {
+        win.browserWindow.setMinimumSize(40, 40);
+    }
     const listener = async (e: any, rawPayloadBounds: RectangleBase, changeType: ChangeType) => {
         try {
             const groupInfo = getGroupInfoCacheForWindow(win);
@@ -319,6 +326,13 @@ export function addWindowToGroup(win: OpenFinWindow) {
 export function removeWindowFromGroup(win: OpenFinWindow) {
     if (!win.browserWindow.isDestroyed()) {
         win.browserWindow.setUserMovementEnabled(true);
+        //If sizeConstraints: apply
+        if (win.browserWindow._options.maxHeight !== undefined || win.browserWindow._options.maxWidth !== undefined) {
+            win.browserWindow.setMaximumSize(win.browserWindow._options.maxWidth || -1, win.browserWindow._options.maxHeight || -1);
+        }
+        if (win.browserWindow._options.minHeight !== undefined || win.browserWindow._options.minHeight !== undefined) {
+            win.browserWindow.setMinimumSize(win.browserWindow._options.minHeight || 0, win.browserWindow._options.minHeight || 0);
+        }
         const winId = win.browserWindow.nativeId;
         const listener = listenerCache.get(winId);
         if (listener) {
