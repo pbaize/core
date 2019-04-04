@@ -136,6 +136,7 @@ export type WebRequestHeaderConfig = {
 };
 
 export interface WindowOptions {
+    pullOnGrow?: boolean;
     accelerator?: {
         devtools: boolean;
         reload: boolean;

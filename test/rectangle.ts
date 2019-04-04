@@ -402,6 +402,61 @@ describe('Rectangle', () => {
         const propagatedMoves = Rectangle.PROPAGATE_MOVE(0, startRect, delta, rectsInit);
         assert.deepEqual(propagatedMoves.map(x => x.bounds), rectsFinal.map(x => x.bounds));
     });
+    it('should handle tabstrip Situation', () => {
+        const startRect = Rectangle.CREATE_FROM_BOUNDS({ x: 0, y: 0, width: 100, height: 60 },
+            { minHeight: 60, maxHeight: 60, pullOnGrow: true });
+        const heightDiff = 40;
+        const endRect = startRect.shift({x: 0, y: -heightDiff, height: 0, width: 0});
+        const proposedDestination = { x: 0, y: -heightDiff, height: 60 + heightDiff, width: 100 };
+        const rectsInit = [
+            startRect,
+            Rectangle.CREATE_FROM_BOUNDS({ x: 0, y: 60, width: 100, height: 100 })];
+        const rectsFinal = [
+            endRect,
+            Rectangle.CREATE_FROM_BOUNDS({ x: 0, y: 60 - heightDiff, width: 100, height: 100 + heightDiff })];
+
+        const delta = startRect.delta(proposedDestination);
+
+        const propagatedMoves = Rectangle.PROPAGATE_MOVE(0, startRect, delta, rectsInit);
+        assert.deepEqual(propagatedMoves.map(x => x.bounds), rectsFinal.map(x => x.bounds));
+    });
+    it('should handle tabstrip Situation Large diff', () => {
+        const startRect = Rectangle.CREATE_FROM_BOUNDS({ x: 0, y: 0, width: 100, height: 60 },
+            { minHeight: 60, maxHeight: 60, pullOnGrow: true });
+        const heightDiff = 400;
+        const endRect = startRect.shift({ x: 0, y: -heightDiff, height: 0, width: 0 });
+        const proposedDestination = { x: 0, y: -heightDiff, height: 60 + heightDiff, width: 100 };
+        const rectsInit = [
+            startRect,
+            Rectangle.CREATE_FROM_BOUNDS({ x: 0, y: 60, width: 100, height: 100 })];
+        const rectsFinal = [
+            endRect,
+            Rectangle.CREATE_FROM_BOUNDS({ x: 0, y: 60 - heightDiff, width: 100, height: 100 + heightDiff })];
+
+        const delta = startRect.delta(proposedDestination);
+
+        const propagatedMoves = Rectangle.PROPAGATE_MOVE(0, startRect, delta, rectsInit);
+        assert.deepEqual(propagatedMoves.map(x => x.bounds), rectsFinal.map(x => x.bounds));
+    });
+    it('should handle tabstrip Situation negative diff', () => {
+        const startRect = Rectangle.CREATE_FROM_BOUNDS({ x: 0, y: 0, width: 100, height: 60 },
+            { minHeight: 60, maxHeight: 60, pullOnGrow: true });
+        const heightDiff = -400;
+        const endRect = startRect.shift({ x: 0, y: -heightDiff, height: 0, width: 0 });
+        const proposedDestination = { x: 0, y: -heightDiff, height: 60 + heightDiff, width: 100 };
+        const rectsInit = [
+            startRect,
+            Rectangle.CREATE_FROM_BOUNDS({ x: 0, y: 60, width: 100, height: 100 })];
+        const rectsFinal = [
+            endRect,
+            Rectangle.CREATE_FROM_BOUNDS({ x: 0, y: 60 - heightDiff, width: 100, height: 38 })];
+
+        const delta = startRect.delta(proposedDestination);
+
+        const propagatedMoves = Rectangle.PROPAGATE_MOVE(0, startRect, delta, rectsInit);
+        assert.deepEqual(propagatedMoves.map(x => x.bounds), rectsFinal.map(x => x.bounds));
+    });
+
 });
 
 function rectList (): Rectangle[] {

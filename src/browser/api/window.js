@@ -348,6 +348,9 @@ let optionSetters = {
         });
         setOptOnBrowserWin('opacity', opacity, browserWin);
     },
+    pullOnGrow: function(newVal, browserWin) {
+        browserWin._options.pullOnGrow = newVal;
+    },
     resizable: function(newVal, browserWin) {
         var resizeBool = !!newVal; // ensure bool val
 

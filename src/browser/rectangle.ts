@@ -16,6 +16,7 @@ export interface Opts {
     maxWidth?: number;
     minHeight?: number;
     maxHeight?: number;
+    pullOnGrow?: boolean;
 }
 export interface RectangleBase {
     x: number;
@@ -31,6 +32,7 @@ class RectOptionsOpts {
     public maxWidth?: number;
     public minHeight?: number;
     public maxHeight?: number;
+    public pullOnGrow: boolean;
 
     constructor(opts: Opts) {
         // when resizing, dont let the window get so small you cant see it / grab it
@@ -38,6 +40,7 @@ class RectOptionsOpts {
         this.maxWidth = opts.maxWidth || Number.MAX_SAFE_INTEGER;
         this.minHeight = Math.max(opts.minHeight || 38, 38);
         this.maxHeight = opts.maxHeight || Number.MAX_SAFE_INTEGER;
+        this.pullOnGrow = opts.pullOnGrow || false;
     }
 }
 const zeroDelta = { x: 0, y: 0, height: 0, width: 0 };
@@ -308,11 +311,11 @@ export class Rectangle {
                     changes.width += (rect[sideToAlign] - (this.x + this.width));
                     if (changes.width < this.opts.minWidth) {
                         // prevent 'pushing' a window via the resizing of another
-                        changes.x = rect[sideToAlign] - this.opts.minWidth;
+                        if (!this.opts.pullOnGrow) { changes.x = rect[sideToAlign] - this.opts.minWidth; }
                         changes.width = this.opts.minWidth;
                     } else if (changes.width > this.opts.maxWidth) {
                         // prevent 'pulling' a window via the resizing of another
-                        changes.x = rect[sideToAlign] - this.opts.maxWidth;
+                        if (!this.opts.pullOnGrow) { changes.x = rect[sideToAlign] - this.opts.maxWidth; }
                         changes.width = this.opts.maxWidth;
                     }
                 }
@@ -336,11 +339,11 @@ export class Rectangle {
                     changes.height += (rect[sideToAlign] - (this.y + this.height));
                     if (changes.height < this.opts.minHeight) {
                         // prevent 'pushing' a window via the resizing of another
-                        changes.y = rect[sideToAlign] - this.opts.minHeight;
+                        if (!this.opts.pullOnGrow) { changes.y = rect[sideToAlign] - this.opts.minHeight; }
                         changes.height = this.opts.minHeight;
                     } else if (changes.height > this.opts.maxHeight) {
                         // prevent "pulling" a window via the resizing of another
-                        changes.y = rect[sideToAlign] - this.opts.maxHeight;
+                        if (!this.opts.pullOnGrow) { changes.y = rect[sideToAlign] - this.opts.maxHeight; }
                         changes.height = this.opts.maxHeight;
                     }
                 }
@@ -351,8 +354,11 @@ export class Rectangle {
         return Rectangle.CREATE_FROM_BOUNDS(changes, this.opts);
     }
 
-    public shift = (delta: RectangleBase) => {
+    public shift = (delta: RectangleBase): Rectangle => {
         return new Rectangle(this.x + delta.x, this.y + delta.y, this.width + delta.width, this.height + delta.height, this.opts);
+    }
+    public subtract = (delta: RectangleBase): Rectangle => {
+        return new Rectangle(this.x - delta.x, this.y - delta.y, this.width - delta.width, this.height - delta.height, this.opts);
     }
 
     public move = (cachedBounds: RectangleBase, currentBounds: RectangleBase): Rectangle => {
@@ -590,20 +596,15 @@ export class Rectangle {
 function propMoveThroughGraph (
     rects: Rectangle[], 
     refVertex: number, 
-    cachedBounds: Rectangle, 
+    before: Rectangle, 
     proposedBounds: Rectangle,
     visited: number[] = []): Rectangle [] {
 
     const graph = Rectangle.GRAPH(rects);
     const [vertices, edges] = graph;
     const distances = new Map();
-    let movedRef = rects[refVertex];
+    let movedRef = rects[refVertex].move(before, proposedBounds);;
 
-    if (movedRef.hasIdenticalBounds( cachedBounds)) {
-        movedRef = Rectangle.CREATE_FROM_BOUNDS(proposedBounds);
-    } else {
-        movedRef = movedRef.move(cachedBounds, proposedBounds);
-    }
 
     for (let v in vertices) {
         distances.set(+v, Infinity);

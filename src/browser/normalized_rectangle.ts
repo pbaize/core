@@ -59,7 +59,8 @@ export function applyOffset(rect: RectangleBase, offset: RectangleBase = zeroDel
         height: rect.height + offset.height
     };
 }
-export function normalizeExternalBounds(rect: RectangleBase, offset: RectangleBase) {
+export function normalizeExternalBounds(rect: RectangleBase, move: Move) {
+    const offset = move.offset;
     return applyOffset(rect, negate(offset));
 }
 export function getEventBounds(rect: RectangleBase, offset?: RectangleBase) {
