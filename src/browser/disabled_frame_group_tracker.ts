@@ -129,7 +129,7 @@ async function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
 }
 
 function handleBatchedMove(moves: Move[], bringWinsToFront: boolean = false) {
-    if (isWin32) {
+    if (false) {
         const { flag: { noZorder, noSize, noActivate } } = WindowTransaction;
         const flags = noZorder + noActivate;
         const wt = new WindowTransaction.Transaction(0);
@@ -157,7 +157,7 @@ function handleBoundsChanging(
     e: any,
     rawPayloadBounds: RectangleBase,
     changeType: ChangeType,
-    treatBothChangedAsJustAResize: boolean = false
+    reactingToEvent: boolean = false
 ): Move[] {
     const initialPositions: Move[] = getInitialPositions(win);
     const leaderRectIndex = initialPositions.map(x => x.ofWin).indexOf(win);
@@ -166,19 +166,22 @@ function handleBoundsChanging(
     const start = startMove.rect;
     const { offset } = startMove;
     const end = normalizeExternalBounds(rawPayloadBounds, offset); //Corrected
+    const delta = start.delta(end);
+    const xShift = delta.x ? delta.x + delta.width : 0;
+    const yShift = delta.y ? delta.y + delta.height : 0;
     switch (changeType) {
         case ChangeType.POSITION:
-            moves = handleMoveOnly(start, end, initialPositions);
+            const normalizedBounds = {...delta, width: 0, height: 0};
+            moves = handleMoveOnly(start, start.shift(normalizedBounds), initialPositions);
             break;
         case ChangeType.SIZE:
+            const resizeDelta = { x: delta.x - xShift, y: delta.y - yShift, width: delta.width, height: delta.height };
+            writeToLog('info', 'resizeDelta ' + JSON.stringify(resizeDelta));
             moves = handleResizeOnly(leaderRectIndex, startMove, end, initialPositions);
             break;
         case ChangeType.POSITION_AND_SIZE:
-            const delta = start.delta(end);
-            const xShift = delta.x ? delta.x + delta.width : 0;
-            const yShift = delta.y ? delta.y + delta.height : 0;
             const shift = { x: xShift, y: yShift, width: 0, height: 0 };
-            const resizeDelta = {x: delta.x - xShift, y: delta.y - yShift, width: delta.width, height: delta.height};
+            // const resizeDelta = {x: delta.x - xShift, y: delta.y - yShift, width: delta.width, height: delta.height};
             const resized = (delta.width || delta.height);
             moves = resized
                 ? handleResizeOnly(leaderRectIndex, startMove, start.shift(resizeDelta), initialPositions)
@@ -187,14 +190,9 @@ function handleBoundsChanging(
             //This flag is here because sometimes the runtime lies and says we moved on a resize
             //This flag should always be set to true when relying on runtime events. It should be false on api moves.
             //Setting it to false on runtime events can cause a growing window bug.
-            moves = moved && !treatBothChangedAsJustAResize
+            moves = moved && !reactingToEvent
                 ? handleMoveOnly(start, start.shift(shift), moves)
                 : moves;
-
-            break;
-        default: {
-            moves = [];
-        } break;
     }
     return moves;
 }
@@ -260,17 +258,26 @@ export function addWindowToGroup(win: OpenFinWindow) {
             } else {
                 const uuid = win.uuid;
                 const name = win.name;
-                const eventBounds = getEventBounds(win.browserWindow.getBounds());
+                const initialPosition = Rectangle.CREATE_FROM_BOUNDS(win.browserWindow.getBounds());
+                const eventBounds = getEventBounds(initialPosition);
                 const moved = new Set<OpenFinWindow>();
                 groupInfo.boundsChanging = true;
                 await raiseEvent(win, 'begin-user-bounds-changing', { ...eventBounds, windowState: getState(win.browserWindow) });
-                const initialMoves = handleBoundsChanging(win, e, rawPayloadBounds, changeType, true);
-                handleBatchedMove(initialMoves, true);
+                // const initialMoves = handleBoundsChanging(win, e, rawPayloadBounds, changeType, true);
+                // handleBatchedMove(initialMoves, true);
                 groupInfo.interval = setInterval(() => {
                     try {
                         if (groupInfo.payloadCache.length) {
-                            const [a, b, c, d] = groupInfo.payloadCache.pop();
-                            const moves = handleBoundsChanging(a, b, c, d, true);
+                            const [cachedWin, event, eventBounds, changeType] = groupInfo.payloadCache.pop();
+                            const delta = initialPosition.delta(eventBounds);
+                            const xShift = delta.x ? delta.x + delta.width : 0;
+                            const yShift = delta.y ? delta.y + delta.height : 0;
+                            const moveDelta = Math.abs(xShift) + Math.abs(yShift);
+                            const resizeDelta = Math.abs(delta.width) + Math.abs(delta.height);
+                            const normalizedChangetype = moveDelta >= resizeDelta
+                                ? 0
+                                : 1;
+                            const moves = handleBoundsChanging(cachedWin, event, eventBounds, normalizedChangetype, true);
                             groupInfo.payloadCache = [];
                             handleBatchedMove(moves);
                             moves.forEach((move) => {
