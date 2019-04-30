@@ -3271,7 +3271,7 @@ declare namespace Electron {
      * on macOS 10.14 Mojave unless the app has been authorized as a trusted
      * accessibility client:
      */
-    register(accelerator: Accelerator, callback: Function): void;
+    register(accelerator: Accelerator, callback: Function): boolean;
     /**
      * Unregisters the global shortcut of accelerator.
      */

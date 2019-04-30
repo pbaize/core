@@ -139,6 +139,9 @@ declare namespace Electron {
         public elapsedTime(): number;
         public isScreenSaverRunning(): boolean;
     }
+    export interface globalShortcut {
+       register(accelerator: Accelerator, callback: Function): boolean;
+    }
 
     export class nativeTimer {
         constructor(action: () => void, intervalTime: number);
