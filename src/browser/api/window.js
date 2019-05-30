@@ -1,11 +1,10 @@
-/*
+/**
     src/browser/api/window.js
- */
+ **/
 
 // build-in modules
 let fs = require('fs');
 let path = require('path');
-let url = require('url');
 let electron = require('electron');
 let BrowserWindow = electron.BrowserWindow;
 let electronApp = electron.app;
@@ -23,7 +22,7 @@ import { deletePendingAuthRequest, getPendingAuthRequest } from '../authenticati
 import BoundsChangedStateTracker from '../bounds_changed_state_tracker';
 let convertOptions = require('../convert_options.js');
 let coreState = require('../core_state.js');
-let ExternalWindowEventAdapter = require('../external_window_event_adapter.js');
+import ExternalWindowEventAdapter from '../external_window_event_adapter';
 import { cachedFetch } from '../cached_resource_fetcher';
 let log = require('../log');
 import ofEvents from '../of_events';
@@ -35,6 +34,7 @@ import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
 import { FrameInfo } from './frame';
 import { System } from './system';
+import * as WebContents from './webcontents';
 import { isFileUrl, isHttpUrl, getIdentityFromObject, isObject, mergeDeep } from '../../common/main';
 import {
     DEFAULT_RESIZE_REGION_SIZE,
@@ -47,17 +47,11 @@ import {
     showErrorBox
 } from '../../common/errors';
 import * as NativeWindow from './native_window';
+import { WINDOWS_MESSAGE_MAP } from '../../common/windows_messages';
 
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
 const windowPosCacheFolder = 'winposCache';
-const WindowsMessages = {
-    WM_KEYDOWN: 0x0100,
-    WM_KEYUP: 0x0101,
-    WM_SYSKEYDOWN: 0x0104,
-    WM_SYSKEYUP: 0x0105,
-};
-
 let Window = {}; // jshint ignore:line
 const disabledFrameRef = new Map();
 
@@ -1120,7 +1114,7 @@ Window.close = function(identity, force, callback = () => {}) {
         if (!browserWindow.isDestroyed()) {
             let openfinWindow = Window.wrap(identity.uuid, identity.name);
             openfinWindow.forceClose = true;
-            NativeWindow.close(browserWindow);
+            browserWindow.close();
         }
     };
 
@@ -1165,10 +1159,10 @@ Window.embed = function(identity, parentHwnd) {
     }
 
     if (isWin32) {
-        browserWindow.setMessageObserver(WindowsMessages.WM_KEYDOWN, parentHwnd);
-        browserWindow.setMessageObserver(WindowsMessages.WM_KEYUP, parentHwnd);
-        browserWindow.setMessageObserver(WindowsMessages.WM_SYSKEYDOWN, parentHwnd);
-        browserWindow.setMessageObserver(WindowsMessages.WM_SYSKEYUP, parentHwnd);
+        browserWindow.setMessageObserver(WINDOWS_MESSAGE_MAP.WM_KEYDOWN, parentHwnd);
+        browserWindow.setMessageObserver(WINDOWS_MESSAGE_MAP.WM_KEYUP, parentHwnd);
+        browserWindow.setMessageObserver(WINDOWS_MESSAGE_MAP.WM_SYSKEYDOWN, parentHwnd);
+        browserWindow.setMessageObserver(WINDOWS_MESSAGE_MAP.WM_SYSKEYUP, parentHwnd);
     }
 
     ofEvents.emit(route.window('embedded', identity.uuid, identity.name), {
@@ -1199,9 +1193,7 @@ Window.executeJavascript = function(identity, code, callback = () => {}) {
         return;
     }
 
-    browserWindow.webContents.executeJavaScript(code, true, (result) => {
-        callback(undefined, result);
-    });
+    WebContents.executeJavascript(browserWindow.webContents, code, callback);
 };
 
 Window.flash = function(identity) {
@@ -1278,23 +1270,16 @@ Window.getGroup = function(identity) {
 Window.getWindowInfo = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'get info for');
     const { preloadScripts } = Window.wrap(identity.uuid, identity.name);
-    const webContents = browserWindow.webContents;
-    const windowInfo = {
-        canNavigateBack: webContents.canGoBack(),
-        canNavigateForward: webContents.canGoForward(),
+    const windowInfo = Object.assign({
         preloadScripts,
-        title: webContents.getTitle(),
-        url: webContents.getURL()
-    };
+    }, WebContents.getInfo(browserWindow.webContents));
     return windowInfo;
 };
 
 
 Window.getAbsolutePath = function(identity, path) {
     let browserWindow = getElectronBrowserWindow(identity, 'get URL for');
-    let windowURL = browserWindow.webContents.getURL();
-
-    return (path || path === 0) ? url.resolve(windowURL, path) : '';
+    return (path || path === 0) ? WebContents.getAbsolutePath(browserWindow.webContents, path) : '';
 };
 
 
@@ -1503,33 +1488,28 @@ Window.moveTo = function(identity, left, top) {
 };
 
 Window.navigate = function(identity, url) {
-    let browserWindow = getElectronBrowserWindow(identity, 'navigate');
-    browserWindow.webContents.loadURL(url);
+    const browserWindow = getElectronBrowserWindow(identity, 'navigate');
+    return WebContents.navigate(browserWindow.webContents, url);
 };
 
 Window.navigateBack = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity, 'navigate back');
-    browserWindow.webContents.goBack();
+    const browserWindow = getElectronBrowserWindow(identity, 'navigate back');
+    return WebContents.navigateBack(browserWindow.webContents);
 };
 
 Window.navigateForward = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity, 'navigate forward');
-    browserWindow.webContents.goForward();
+    const browserWindow = getElectronBrowserWindow(identity, 'navigate forward');
+    return WebContents.navigateForward(browserWindow.webContents);
 };
 
 Window.reload = function(identity, ignoreCache = false) {
-    let browserWindow = getElectronBrowserWindow(identity, 'reload');
-
-    if (!ignoreCache) {
-        browserWindow.webContents.reload();
-    } else {
-        browserWindow.webContents.reloadIgnoringCache();
-    }
+    const browserWindow = getElectronBrowserWindow(identity, 'reload');
+    WebContents.reload(browserWindow.webContents, ignoreCache);
 };
 
 Window.stopNavigation = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity, 'stop navigating');
-    browserWindow.webContents.stop();
+    const browserWindow = getElectronBrowserWindow(identity, 'stop navigating');
+    WebContents.stopNavigation(browserWindow.webContents);
 };
 
 Window.removeEventListener = function(identity, type, listener) {
@@ -1769,15 +1749,12 @@ Window.authenticate = function(identity, username, password, callback) {
 
 Window.getZoomLevel = function(identity, callback) {
     let browserWindow = getElectronBrowserWindow(identity, 'get zoom level for');
-
-    browserWindow.webContents.getZoomLevel(callback);
+    WebContents.getZoomLevel(browserWindow.webContents, callback);
 };
 
 Window.setZoomLevel = function(identity, level) {
     let browserWindow = getElectronBrowserWindow(identity, 'set zoom level for');
-
-    // browserWindow.webContents.setZoomLevel(level); // zooms all windows loaded from same domain
-    browserWindow.webContents.send('zoom', { level }); // zoom just this window
+    WebContents.setZoomLevel(browserWindow.webContents, level);
 };
 
 Window.onUnload = (identity) => {

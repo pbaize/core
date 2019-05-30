@@ -1,6 +1,6 @@
 import { Rectangle, RectangleBase } from './rectangle';
-import { OpenFinWindow } from '../shapes';
 const { System } = require('./api/system');
+import { GroupWindow } from '../shapes';
 import { Move } from './disabled_frame_group_tracker';
 
 const osName: string = System.getHostSpecs().name;
@@ -20,7 +20,7 @@ const framedOffset: Readonly<RectangleBase> = {
     width: -14
 };
 export const zeroDelta: Readonly<RectangleBase> = {x: 0, y: 0, height: 0, width: 0 };
-export function moveFromOpenFinWindow(ofWin: OpenFinWindow): Move {
+export function moveFromOpenFinWindow(ofWin: GroupWindow): Move {
     const win = ofWin.browserWindow;
     const bounds = win.getBounds();
     const delta = isWin10 && win._options.frame
