@@ -89,6 +89,8 @@ declare namespace Electron {
         getOwnerBrowserWindow: () => BrowserWindow | void;
         mainFrameRoutingId: number;
         session: Session;
+        registerIframe: (frameName: string, frameRoutingId: number) => void;
+        unregisterIframe: (frameName: string, frameRoutingId: number) => void;
     }
 
     export interface BrowserWindowConstructorOptions {
