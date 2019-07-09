@@ -7,11 +7,14 @@ import {
 } from 'electron';
 import { ERROR_BOX_TYPES } from './common/errors';
 import { AnchorType } from '../js-adapter/src/shapes';
+import { WritableOptions } from 'stream';
+import { OfView } from './browser/core_state';
 
 export interface Identity {
     uuid: string;
     name?: string;
     runtimeUuid?: string;
+    entityType?: EntityType;
 }
 
 export interface ProviderIdentity extends Identity {
@@ -84,6 +87,7 @@ export interface App {
     parentUuid?: string;
     sentHideSplashScreen: boolean;
     uuid: string;
+    views: OfView[];
 }
 
 export interface Window {
@@ -92,8 +96,17 @@ export interface Window {
     openfinWindow: OpenFinWindow|null;
     parentId?: number;
 }
-
-export interface OpenFinWindow {
+export interface InjectableContext {
+    uuid: string;
+    name: string;
+    _options: WebOptions;
+    frames: Map<string, ChildFrameInfo>;
+}
+export interface WebOptions {
+    uuid: string;
+    name: string;
+}
+export interface OpenFinWindow extends InjectableContext {
     isIframe?: boolean;
     _options: WindowOptions;
     _window: BrowserWindow;
@@ -105,11 +118,10 @@ export interface OpenFinWindow {
     groupUuid: string|null;
     hideReason: string;
     id: number;
-    name: string;
     preloadScripts: PreloadScriptState[];
-    uuid: string;
     mainFrameRoutingId: number;
     isProxy?: boolean;
+    view?: OfView;
 }
 
 export interface BrowserWindow extends BrowserWindowElectron {
@@ -138,7 +150,7 @@ export type WebRequestHeaderConfig = {
     headers: WebRequestHeader[]  // key=value is added to headers
 };
 
-export interface WindowOptions {
+export interface WindowOptions extends WebOptions {
     accelerator?: {
         devtools: boolean;
         reload: boolean;
@@ -152,6 +164,7 @@ export interface WindowOptions {
     };
     alwaysOnBottom?: boolean;
     alwaysOnTop?: boolean;
+    api?: any;
     applicationIcon?: string;
     appLogFlushInterval?: number;
     aspectRatio?: number;
@@ -377,7 +390,8 @@ export interface APIHandlerMap {
         apiPath?: string;
         apiPolicyDelegate?: {
             checkPermissions: (args: any) => boolean;
-        }
+        },
+        defaultPermission?: boolean
     };
 }
 

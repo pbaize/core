@@ -91,6 +91,8 @@ declare namespace Electron {
         session: Session;
         registerIframe: (frameName: string, frameRoutingId: number) => void;
         unregisterIframe: (frameName: string, frameRoutingId: number) => void;
+        //DELETE IN v13
+        sendToFrame(frameId: number, channel: string, ...args: any[]): void;
     }
 
     export interface BrowserWindowConstructorOptions {
