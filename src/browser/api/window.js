@@ -16,9 +16,6 @@ let _ = require('underscore');
 const crypto = require('crypto');
 import * as Rx from 'rxjs';
 
-// local modules
-import animations from '../animations';
-import { deletePendingAuthRequest, getPendingAuthRequest } from '../authentication_delegate';
 import BoundsChangedStateTracker from '../bounds_changed_state_tracker';
 let convertOptions = require('../convert_options.js');
 let coreState = require('../core_state.js');
@@ -26,13 +23,12 @@ import ExternalWindowEventAdapter from '../external_window_event_adapter';
 import { cachedFetch } from '../cached_resource_fetcher';
 let log = require('../log');
 import ofEvents from '../of_events';
+import { show, enableUserMovement, getBoundsFromDisk, setBounds, maximize, minimize } from './window_actions';
 import SubscriptionManager from '../subscription_manager';
 import WindowGroups from '../window_groups';
 import { addConsoleMessageToRVMMessageQueue } from '../rvm/utils';
 import { validateNavigation, navigationValidator } from '../navigation_validation';
-import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
-import { FrameInfo } from './frame';
 import { System } from './system';
 import * as WebContents from './webcontents';
 import { isFileUrl, isHttpUrl, getIdentityFromObject, isObject, mergeDeep } from '../../common/main';
@@ -46,14 +42,12 @@ import {
     ERROR_BOX_TYPES,
     showErrorBox
 } from '../../common/errors';
-import * as NativeWindow from './native_window';
-import { WINDOWS_MESSAGE_MAP } from '../../common/windows_messages';
 
-const subscriptionManager = new SubscriptionManager();
-const isWin32 = process.platform === 'win32';
+export const subscriptionManager = new SubscriptionManager();
+export const isWin32 = process.platform === 'win32';
 const windowPosCacheFolder = 'winposCache';
-export const Window = {}; // jshint ignore:line
-const disabledFrameRef = new Map();
+
+export const disabledFrameRef = new Map();
 
 let browserWindowEventMap = {
     'api-injection-disabled': {
@@ -129,7 +123,7 @@ let webContentsEventMap = {
     }
 };
 
-function genWindowKey(identity) {
+export function genWindowKey(identity) {
     return `${identity.uuid}-${identity.name}`;
 }
 
@@ -235,7 +229,7 @@ let optionSetters = {
 
         let uuid = browserWin._options.uuid;
         let name = browserWin._options.name;
-        let openfinWindow = Window.wrap(uuid, name);
+        let openfinWindow = wrap(uuid, name);
         let hideOnCloseListener = openfinWindow.hideOnCloseListener;
         let closeEventString = route.window('close-requested', uuid, name);
 
@@ -400,7 +394,7 @@ let optionSetters = {
 };
 
 
-Window.create = function(id, opts) {
+export function create(id, opts) {
     let name = opts.name;
     let uuid = opts.uuid;
     let identity = {
@@ -416,7 +410,7 @@ Window.create = function(id, opts) {
 
     let hideReason = 'hide';
     let hideOnCloseListener = () => {
-        let openfinWindow = Window.wrap(uuid, name);
+        let openfinWindow = wrap(uuid, name);
         openfinWindow.hideReason = 'hide-on-close';
         browserWindow.hide();
     };
@@ -533,7 +527,7 @@ Window.create = function(id, opts) {
         // once the window is closed, be sure to close all the children
         // it may have and remove it from the
         browserWindow.on('close', (event) => {
-            let ofWindow = Window.wrap(uuid, name);
+            let ofWindow = wrap(uuid, name);
             let closeEventString = route.window('close-requested', uuid, name);
             let listenerCount = ofEvents.listenerCount(closeEventString);
 
@@ -883,7 +877,7 @@ Window.create = function(id, opts) {
             const constructorCallbackMessage = event[0];
             if (_options.autoShow || _options.toShowOnRun) {
                 if (!browserWindow.isVisible()) {
-                    Window.show(identity);
+                    show(identity);
                 }
             }
 
@@ -918,7 +912,7 @@ Window.create = function(id, opts) {
         _window: browserWindow
     };
 
-    const prepareConsoleMessageForRVM = (event, level, message, lineNo, sourceId) => {
+    const prepareConsoleMessageForRVM = (event, level, message) => {
         /*
             DEBUG:     -1
             INFO:      0
@@ -1004,18 +998,18 @@ Window.create = function(id, opts) {
     }
 
     return winObj;
-};
+}
 
 
-Window.wrap = function(uuid, name) {
+export function wrap(uuid, name) {
     return coreState.getWindowByUuidName(uuid, name);
-};
+}
 
-Window.connected = function() {};
+export function connected() {}
 
-Window.isEmbedded = function() {};
+export function isEmbedded() {}
 
-Window.addEventListener = function(identity, targetIdentity, type, listener) {
+export function addEventListener(identity, targetIdentity, type, listener) {
     // TODO this leaves it up the the app to unsubscribe and is a potential
     //      leak. perhaps we need a way to unhook when an app disconnects
     //      automatically
@@ -1060,167 +1054,22 @@ Window.addEventListener = function(identity, targetIdentity, type, listener) {
         ofEvents.removeListener(eventString, safeListener);
     };
     return unsubscribe;
-};
+}
 
-Window.animate = function(identity, transitions, options = {}, callback = () => {}, errorCallback = () => {}) {
-    let browserWindow = getElectronBrowserWindow(identity);
-
-    if (!browserWindow) {
-        callback();
-        return;
-    }
-
-    let animationMeta = transitions || {};
-    let animationTween = (options && options.tween) || 'ease-in-out';
-    animationMeta.interrupt = (options || {}).interrupt;
-    if (typeof animationMeta.interrupt !== 'boolean') {
-        animationMeta.interrupt = true;
-    }
-
-    const { size } = transitions;
-
-    if (!size) {
-        animations.getAnimationHandler().add(browserWindow, animationMeta, animationTween, callback, errorCallback);
-        return;
-    }
-
-    if (!('_options' in browserWindow)) {
-        errorCallback(new Error(`No window options present for uuid: ${identity.uuid} name: ${identity.name}`));
-        return;
-    }
-
-    let finalWidth = browserWindow._options.width;
-    if (size.width) {
-        finalWidth = size.relative ? finalWidth + size.width : size.width;
-    }
-
-    let finalHeight = browserWindow._options.height;
-    if (size.height) {
-        finalHeight = size.relative ? finalHeight + size.height : size.height;
-    }
-
-    const newBoundsWithinConstraints = areNewBoundsWithinConstraints(browserWindow._options, finalWidth, finalHeight);
-
-    if (newBoundsWithinConstraints) {
-        animations.getAnimationHandler().add(browserWindow, animationMeta, animationTween, callback, errorCallback);
-    } else {
-        errorCallback(new Error(`Proposed window bounds violate size constraints for uuid: ${identity.uuid} name: ${identity.name}`));
-    }
-};
-
-Window.blur = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity);
-
-    if (!browserWindow) {
-        return;
-    }
-
-    browserWindow.blur();
-};
-
-Window.bringToFront = function(identity) {
-    const browserWindow = getElectronBrowserWindow(identity);
-    if (!browserWindow) {
-        return;
-    }
-    NativeWindow.bringToFront(browserWindow);
-};
-
-
-// TODO investigate the close sequence, there appears to be a case were you
-// try to wrap and close an already closed window
-Window.close = function(identity, force, callback = () => {}) {
-    let browserWindow = getElectronBrowserWindow(identity);
-
-    if (!browserWindow) {
-        callback();
-        return;
-    }
-
-    let payload = {
-        force
-    };
-
-    let defaultAction = () => {
-        if (!browserWindow.isDestroyed()) {
-            let openfinWindow = Window.wrap(identity.uuid, identity.name);
-            openfinWindow.forceClose = true;
-            browserWindow.close();
-        }
-    };
-
-    ofEvents.once(route.window('closed', identity.uuid, identity.name), () => {
-        callback();
-    });
-
-    handleForceActions(identity, force, 'close-requested', payload, defaultAction);
-};
-
-function disabledFrameUnsubDecorator(identity) {
+export function disabledFrameUnsubDecorator(identity) {
     const windowKey = genWindowKey(identity);
     return function() {
         let refCount = disabledFrameRef.get(windowKey) || 0;
         if (refCount > 1) {
             disabledFrameRef.set(windowKey, --refCount);
         } else {
-            Window.enableUserMovement(identity);
+            enableUserMovement(identity);
         }
     };
 }
 
-Window.disableUserMovement = function(requestorIdentity, windowIdentity) {
-    const browserWindow = getElectronBrowserWindow(windowIdentity);
-    const windowKey = genWindowKey(windowIdentity);
 
-    if (!browserWindow) {
-        return;
-    }
-
-    let dframeRefCount = disabledFrameRef.get(windowKey) || 0;
-    disabledFrameRef.set(windowKey, ++dframeRefCount);
-    subscriptionManager.registerSubscription(disabledFrameUnsubDecorator(windowIdentity), requestorIdentity, `disable-frame-${windowKey}`);
-    browserWindow.setUserMovementEnabled(false);
-};
-
-Window.embed = function(identity, parentHwnd) {
-    let browserWindow = getElectronBrowserWindow(identity);
-
-    if (!browserWindow) {
-        return;
-    }
-
-    if (isWin32) {
-        browserWindow.setMessageObserver(WINDOWS_MESSAGE_MAP.WM_KEYDOWN, parentHwnd);
-        browserWindow.setMessageObserver(WINDOWS_MESSAGE_MAP.WM_KEYUP, parentHwnd);
-        browserWindow.setMessageObserver(WINDOWS_MESSAGE_MAP.WM_SYSKEYDOWN, parentHwnd);
-        browserWindow.setMessageObserver(WINDOWS_MESSAGE_MAP.WM_SYSKEYUP, parentHwnd);
-    }
-
-    ofEvents.emit(route.window('embedded', identity.uuid, identity.name), {
-        topic: 'window',
-        type: 'window-embedded',
-        name: identity.name,
-        uuid: identity.uuid
-    });
-};
-
-Window.enableUserMovement = function(identity) {
-    const windowKey = genWindowKey(identity);
-    let browserWindow = getElectronBrowserWindow(identity);
-
-    if (!browserWindow) {
-        return;
-    }
-
-    if (disabledFrameRef.has(windowKey)) {
-        let dframeRefCount = disabledFrameRef.get(windowKey) || 0;
-        disabledFrameRef.set(windowKey, --dframeRefCount);
-    }
-
-    browserWindow.setUserMovementEnabled(true);
-};
-
-Window.executeJavascript = function(identity, code, callback = () => {}) {
+export function executeJavascript(identity, code, callback = () => {}) {
     let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
@@ -1229,105 +1078,16 @@ Window.executeJavascript = function(identity, code, callback = () => {}) {
     }
 
     WebContents.executeJavascript(browserWindow.webContents, code, callback);
-};
+}
 
-Window.flash = function(identity) {
-    const browserWindow = getElectronBrowserWindow(identity);
-    if (!browserWindow) {
-        return;
-    }
-    NativeWindow.flash(browserWindow);
-};
-
-Window.stopFlashing = function(identity) {
-    const browserWindow = getElectronBrowserWindow(identity);
-    if (!browserWindow) {
-        return;
-    }
-    NativeWindow.stopFlashing(browserWindow);
-};
-
-Window.focus = function(identity) {
-    const browserWindow = getElectronBrowserWindow(identity);
-    if (!browserWindow) {
-        return;
-    }
-    NativeWindow.focus(browserWindow);
-};
-
-Window.getAllFrames = function(identity) {
-    const openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
-
-    if (!openfinWindow) {
-        return [];
-    }
-
-    const framesArr = [coreState.getInfoByUuidFrame(identity)];
-    const subFrames = [];
-
-    for (let [, info] of openfinWindow.frames) {
-        subFrames.push(new FrameInfo(info));
-    }
-
-    return framesArr.concat(subFrames);
-};
-
-Window.getBounds = function(identity) {
-    const browserWindow = getElectronBrowserWindow(identity);
-
-    if (!browserWindow) {
-        return {
-            height: 0,
-            left: -1,
-            top: -1,
-            width: 0,
-            right: -1,
-            bottom: -1
-        };
-    }
-
-    return NativeWindow.getBounds(browserWindow);
-};
-
-
-Window.getGroup = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity);
-
-    if (!browserWindow) {
-        return [];
-    }
-
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    return WindowGroups.getGroup(openfinWindow.groupUuid);
-};
-
-
-Window.getWindowInfo = function(identity) {
-    const browserWindow = getElectronBrowserWindow(identity, 'get info for');
-    const { preloadScripts } = Window.wrap(identity.uuid, identity.name);
-    const windowInfo = Object.assign({
-        preloadScripts,
-    }, WebContents.getInfo(browserWindow.webContents));
-    return windowInfo;
-};
-
-
-Window.getAbsolutePath = function(identity, path) {
+export function getAbsolutePath(identity, path) {
     let browserWindow = getElectronBrowserWindow(identity, 'get URL for');
     return (path || path === 0) ? WebContents.getAbsolutePath(browserWindow.webContents, path) : '';
-};
+}
 
+export function getNativeWindow() {}
 
-Window.getNativeId = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity, 'get ID for');
-
-    return browserWindow.nativeId;
-};
-
-
-Window.getNativeWindow = function() {};
-
-Window.getOptions = function(identity) {
+export function getOptions(identity) {
     // In the case that the identity passed does not exist, or is not a window,
     // return the entity info object. The fail case is used for frame identity on spin up.
     try {
@@ -1335,221 +1095,42 @@ Window.getOptions = function(identity) {
     } catch (e) {
         return System.getEntityInfo(identity);
     }
-};
+}
 
-Window.getParentApplication = function() {
+export function getParentApplication() {
     let app = coreState.getAppByWin(this.id);
 
     return app && app.appObj;
-};
+}
 
+export function getParentWindow() {}
 
-Window.getParentWindow = function() {};
-
-/**
- * Sets/updates window's preload script state and emits relevant events
- */
-Window.setWindowPreloadState = function(identity, payload) {
-    const { uuid, name } = identity;
-    const { url, state, allDone } = payload;
-    const updateTopic = allDone ? 'preload-scripts-state-changed' : 'preload-scripts-state-changing';
-    const frameInfo = coreState.getInfoByUuidFrame(identity);
-    let openfinWindow;
-    if (frameInfo.entityType === 'iframe') {
-        openfinWindow = Window.wrap(frameInfo.parent.uuid, frameInfo.parent.name);
-    } else {
-        openfinWindow = Window.wrap(uuid, name);
-    }
-
-    if (!openfinWindow) {
-        return log.writeToLog('info', `setWindowPreloadState missing openfinWindow ${uuid} ${name}`);
-    }
-    let { preloadScripts } = openfinWindow;
-
-    // Single preload script state change
-    if (!allDone) {
-        if (frameInfo.entityType === 'iframe') {
-            let frameState = openfinWindow.framePreloadScripts[name];
-            if (!frameState) {
-                frameState = openfinWindow.framePreloadScripts[name] = [];
-            }
-            preloadScripts = frameState.find(e => e.url === url);
-            if (!preloadScripts) {
-                frameState.push(preloadScripts = { url });
-            }
-            preloadScripts = [preloadScripts];
-        } else {
-            preloadScripts = openfinWindow.preloadScripts.filter(e => e.url === url);
-        }
-        if (preloadScripts) {
-            preloadScripts[0].state = state;
-        } else {
-            log.writeToLog('info', `setWindowPreloadState missing preloadState ${uuid} ${name} ${url} `);
-        }
-    }
-
-    if (frameInfo.entityType === 'window') {
-        ofEvents.emit(route.window(updateTopic, uuid, name), {
-            name,
-            uuid,
-            preloadScripts
-        });
-    } // @TODO ofEvents.emit(route.frame for iframes
-};
-
-Window.getSnapshot = (opts) => {
-    return new Promise((resolve, reject) => {
-        const { identity, payload: { area } } = opts;
-        const browserWindow = getElectronBrowserWindow(identity);
-
-        if (!browserWindow) {
-            const error = new Error(`Unknown window named '${identity.name}'`);
-            return reject(error);
-        }
-
-        const callback = (img) => resolve(img.toPNG().toString('base64'));
-
-        if (typeof area === 'undefined') {
-            // Snapshot of a full window
-            return browserWindow.capturePage().then(callback);
-        }
-
-        if (!area ||
-            typeof area !== 'object' ||
-            typeof area.x !== 'number' ||
-            typeof area.y !== 'number' ||
-            typeof area.width !== 'number' ||
-            typeof area.height !== 'number'
-        ) {
-            const error = new Error(`Invalid shape of the snapshot's area.`);
-            return reject(error);
-        }
-
-        // Snapshot of a specified area of the window
-        return browserWindow.capturePage(area).then(callback);
-    });
-};
-
-
-Window.getState = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity);
-    if (!browserWindow) {
-        return 'normal';
-    }
-    return NativeWindow.getState(browserWindow);
-};
-
-
-Window.hide = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity);
-    if (!browserWindow) {
-        return;
-    }
-    NativeWindow.hide(browserWindow);
-};
-
-Window.isNotification = function(name) {
-    const noteGuidRegex = /^A21B62E0-16B1-4B10-8BE3-BBB6B489D862/;
-    return noteGuidRegex.test(name);
-};
-
-Window.isShowing = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity);
-    if (!browserWindow) {
-        return false;
-    }
-    return NativeWindow.isVisible(browserWindow);
-};
-
-
-Window.joinGroup = function(identity, grouping) {
-    return WindowGroups.joinGroup({ uuid: identity.uuid, name: identity.name }, { uuid: grouping.uuid, name: grouping.name });
-};
-
-
-Window.leaveGroup = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity);
-
-    if (!browserWindow) {
-        return;
-    }
-
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    return WindowGroups.leaveGroup(openfinWindow);
-};
-
-
-Window.maximize = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity, 'maximize');
-    let maximizable = getOptFromBrowserWin('maximizable', browserWindow, true);
-    if (maximizable) {
-        NativeWindow.maximize(browserWindow);
-    }
-};
-
-
-Window.mergeGroups = function(identity, grouping) {
-    return WindowGroups.mergeGroups({ uuid: identity.uuid, name: identity.name }, { uuid: grouping.uuid, name: grouping.name });
-};
-
-
-Window.minimize = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity, 'minimize');
-    let minimizable = getOptFromBrowserWin('minimizable', browserWindow, true);
-    if (minimizable) {
-        NativeWindow.minimize(browserWindow);
-    }
-};
-
-
-Window.moveBy = function(identity, deltaLeft, deltaTop) {
-    const browserWindow = getElectronBrowserWindow(identity);
-    if (!browserWindow) {
-        return;
-    }
-    NativeWindow.moveBy(browserWindow, { deltaLeft, deltaTop });
-};
-
-
-Window.moveTo = function(identity, left, top) {
-    const browserWindow = getElectronBrowserWindow(identity);
-    if (!browserWindow) {
-        return;
-    }
-    NativeWindow.moveTo(browserWindow, { left, top });
-};
-
-Window.navigate = function(identity, url) {
-    const browserWindow = getElectronBrowserWindow(identity, 'navigate');
-    return WebContents.navigate(browserWindow.webContents, url);
-};
-
-Window.navigateBack = function(identity) {
+export function navigateBack(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'navigate back');
     return WebContents.navigateBack(browserWindow.webContents);
-};
+}
 
-Window.navigateForward = function(identity) {
+export function navigateForward(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'navigate forward');
     return WebContents.navigateForward(browserWindow.webContents);
-};
+}
 
-Window.reload = function(identity, ignoreCache = false) {
+export function reload(identity, ignoreCache = false) {
     const browserWindow = getElectronBrowserWindow(identity, 'reload');
     WebContents.reload(browserWindow.webContents, ignoreCache);
-};
+}
 
-Window.stopNavigation = function(identity) {
+export function stopNavigation(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'stop navigating');
     WebContents.stopNavigation(browserWindow.webContents);
-};
+}
 
-Window.removeEventListener = function(identity, type, listener) {
+export function removeEventListener(identity, type, listener) {
     let browserWindow = getElectronBrowserWindow(identity, 'remove event listener for');
     ofEvents.removeListener(route.window(type, browserWindow.id), listener);
-};
+}
 
-function areNewBoundsWithinConstraints(options, width, height) {
+export function areNewBoundsWithinConstraints(options, width, height) {
     const {
         minWidth,
         minHeight,
@@ -1579,124 +1160,7 @@ function areNewBoundsWithinConstraints(options, width, height) {
 
     return acceptableWidth && acceptableHeight && (aspectRatio <= 0 || roundedProposedRatio === roundedAspectRatio);
 }
-
-Window.resizeBy = function(identity, deltaWidth, deltaHeight, anchor, callback, errorCallback) {
-    const browserWindow = getElectronBrowserWindow(identity);
-    const opts = { anchor, deltaHeight, deltaWidth };
-    if (!browserWindow) {
-        return;
-    }
-
-    if (!('_options' in browserWindow)) {
-        errorCallback(new Error(`No window options present for uuid: ${identity.uuid} name: ${identity.name}`));
-        return;
-    }
-
-    const newWidth = browserWindow._options.width + deltaWidth;
-    const newHeight = browserWindow._options.height + deltaHeight;
-
-    const newBoundsWithinConstraints = areNewBoundsWithinConstraints(browserWindow._options, newWidth, newHeight);
-
-    if (newBoundsWithinConstraints) {
-        NativeWindow.resizeBy(browserWindow, opts);
-        callback();
-    } else {
-        errorCallback(new Error(`Proposed window bounds violate size constraints for uuid: ${identity.uuid} name: ${identity.name}`));
-    }
-};
-
-
-Window.resizeTo = function(identity, width, height, anchor, callback, errorCallback) {
-    const browserWindow = getElectronBrowserWindow(identity);
-    const opts = { anchor, height, width };
-    if (!browserWindow) {
-        return;
-    }
-
-    if (!('_options' in browserWindow)) {
-        errorCallback(new Error(`No window options present for uuid: ${identity.uuid} name: ${identity.name}`));
-        return;
-    }
-
-    const newBoundsWithinConstraints = areNewBoundsWithinConstraints(browserWindow._options, width, height);
-
-    if (newBoundsWithinConstraints) {
-        NativeWindow.resizeTo(browserWindow, opts);
-        callback();
-    } else {
-        errorCallback(new Error(`Proposed window bounds violate size constraints for uuid: ${identity.uuid} name: ${identity.name}`));
-    }
-};
-
-
-Window.restore = function(identity) {
-    const browserWindow = getElectronBrowserWindow(identity, 'restore');
-    NativeWindow.restore(browserWindow);
-};
-
-
-Window.setAsForeground = function(identity) {
-    const browserWindow = getElectronBrowserWindow(identity);
-    if (!browserWindow) {
-        return;
-    }
-    NativeWindow.setAsForeground(browserWindow);
-};
-
-
-Window.setBounds = function(identity, left, top, width, height, callback, errorCallback) {
-    const browserWindow = getElectronBrowserWindow(identity, 'set window bounds for');
-    const opts = { height, left, top, width };
-    if (!browserWindow) {
-        return;
-    }
-
-    if (!('_options' in browserWindow)) {
-        errorCallback(new Error(`No window options present for uuid: ${identity.uuid} name: ${identity.name}`));
-        return;
-    }
-
-    const newBoundsWithinConstraints = areNewBoundsWithinConstraints(browserWindow._options, width, height);
-
-    if (newBoundsWithinConstraints) {
-        NativeWindow.setBounds(browserWindow, opts);
-        callback();
-    } else {
-        errorCallback(new Error(`Proposed window bounds violate size constraints for uuid: ${identity.uuid} name: ${identity.name}`));
-    }
-};
-
-
-Window.show = function(identity, force = false) {
-    const browserWindow = getElectronBrowserWindow(identity);
-
-    if (!browserWindow) {
-        return;
-    }
-
-    const payload = {};
-    const defaultAction = () => NativeWindow.show(browserWindow);
-
-    handleForceActions(identity, force, 'show-requested', payload, defaultAction);
-};
-
-
-Window.showAt = function(identity, left, top, force = false) {
-    const browserWindow = getElectronBrowserWindow(identity);
-
-    if (!browserWindow) {
-        return;
-    }
-
-    const safeLeft = toSafeInt(left);
-    const safeTop = toSafeInt(top);
-    const payload = { top: safeTop, left: safeLeft };
-    const defaultAction = () => NativeWindow.showAt(browserWindow, { left, top });
-
-    handleForceActions(identity, force, 'show-requested', payload, defaultAction);
-};
-
-Window.showMenu = function(identity, x, y, editable, hasSelectedText) {
+export function showMenu(identity, x, y, editable, hasSelectedText) {
     let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
@@ -1778,12 +1242,13 @@ Window.showMenu = function(identity, x, y, editable, hasSelectedText) {
     currentMenu.popup(browserWindow, {
         async: true
     });
-};
-
-Window.defineDraggableArea = function() {};
+}
 
 
-Window.updateOptions = function(identity, updateObj) {
+export function defineDraggableArea() {}
+
+
+export function updateOptions(identity, updateObj) {
     let browserWindow = getElectronBrowserWindow(identity, 'update settings for');
     let { uuid, name } = identity;
     let diff = {},
@@ -1814,63 +1279,21 @@ Window.updateOptions = function(identity, updateObj) {
     } catch (e) {
         console.log(e.message);
     }
-};
+}
 
-Window.exists = function(identity) {
-    return coreState.windowExists(identity.uuid, identity.name);
-};
-
-Window.getBoundsFromDisk = function(identity, callback, errorCallback) {
-    getBoundsCacheSafeFileName(identity, cacheFile => {
-        try {
-            fs.readFile(cacheFile, 'utf8', (err, data) => {
-                if (err) {
-                    errorCallback(err);
-                } else {
-                    try {
-                        callback(JSON.parse(data));
-                    } catch (parseErr) {
-                        errorCallback(new Error(`Error parsing saved bounds data ${parseErr.message}`));
-                    }
-                }
-            });
-        } catch (err) {
-            errorCallback(err);
-        }
-    }, errorCallback);
-};
-
-Window.authenticate = function(identity, username, password, callback) {
-    let {
-        authCallback
-    } = getPendingAuthRequest(identity);
-
-    if (authCallback && typeof(authCallback) === 'function') {
-        authCallback(username, password);
-        deletePendingAuthRequest(identity);
-        callback();
-    } else {
-        callback(new Error('No authentication request pending for window'));
-    }
-};
-
-Window.getZoomLevel = function(identity, callback) {
+export function getZoomLevel(identity, callback) {
     let browserWindow = getElectronBrowserWindow(identity, 'get zoom level for');
     WebContents.getZoomLevel(browserWindow.webContents, callback);
-};
+}
 
-Window.setZoomLevel = function(identity, level) {
+export function setZoomLevel(identity, level) {
     let browserWindow = getElectronBrowserWindow(identity, 'set zoom level for');
     WebContents.setZoomLevel(browserWindow.webContents, level);
-};
+}
 
-Window.onUnload = (identity) => {
+export const onUnload = (identity) => {
     ofEvents.emit(route.window('unload', identity.uuid, identity.name, false), identity);
     ofEvents.emit(route.window('init-subscription-listeners'), identity);
-};
-
-Window.registerWindowName = (identity) => {
-    coreState.registerPendingWindowName(identity.uuid, identity.name);
 };
 
 function emitCloseEvents(identity) {
@@ -1914,7 +1337,7 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
 
     //wrap the operation of closing a child window in a promise.
     function closeChildWin(childId) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             const child = coreState.getWinObjById(childId);
 
             // TODO right now this is forceable to handle the event that there was a close
@@ -1926,7 +1349,7 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
                     uuid: child.uuid
                 };
 
-                Window.close(childIdentity, true, () => {
+                close(childIdentity, true, () => {
                     resolve();
                 });
             } else {
@@ -1937,7 +1360,7 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
 
     //Even if disk operations fail we need to resolve this promise to avoid zombie processes.
     function handleSaveStateAlwaysResolve() {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             if (browserWindow._options.saveWindowState) {
                 const zoomLevel = browserWindow.webContents.getZoomLevel();
                 const cachedBounds = _boundsChangedHandler.getCachedBounds();
@@ -1962,7 +1385,7 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
     //    Close all child windows
     //    Wait for the close event.
     return function() {
-        let ofWindow = Window.wrap(identity.uuid, identity.name);
+        let ofWindow = wrap(identity.uuid, identity.name);
         let childWindows = coreState.getChildrenByWinId(id) || [];
         // remove from core state earlier rather than later
         coreState.removeChildById(id);
@@ -2010,7 +1433,7 @@ function saveBoundsToDisk(identity, bounds, zoomLevel, callback) {
 }
 
 //make sure the uuid/names with special characters do not break the bounds cache.
-function getBoundsCacheSafeFileName(identity, callback, errorCallback) {
+export function getBoundsCacheSafeFileName(identity, callback, errorCallback) {
     const userCache = electronApp.getPath('userCache');
 
     // new hashed file name
@@ -2067,7 +1490,7 @@ function applyAdditionalOptionsToWindowOnVisible(browserWindow, callback) {
 }
 
 
-function handleForceActions(identity, force, eventType, eventPayload, defaultAction) {
+export function handleForceActions(identity, force, eventType, eventPayload, defaultAction) {
     let appEventString = route.application(`window-${eventType}`, identity.uuid);
     let winEventString = route.window(eventType, identity.uuid, identity.name);
     let listenerCount = ofEvents.listenerCount(winEventString);
@@ -2087,7 +1510,6 @@ function handleForceActions(identity, force, eventType, eventPayload, defaultAct
         ofEvents.emit(winEventString, eventPayload);
     }
 }
-
 
 function applyAdditionalOptionsToWindow(browserWindow) {
     let options = browserWindow && browserWindow._options;
@@ -2137,8 +1559,7 @@ function applyAdditionalOptionsToWindow(browserWindow) {
     });
 }
 
-
-function getOptFromBrowserWin(opt, browserWin, defaultVal) {
+export function getOptFromBrowserWin(opt, browserWin, defaultVal) {
     var opts = browserWin && browserWin._options,
         optVal = opts && opts[opt];
 
@@ -2186,7 +1607,7 @@ function boundsChangeDecorator(payload, args) {
             payload[key] = boundsChangePayload[key];
         });
 
-        let _win = Window.wrap(payload.uuid, payload.name);
+        let _win = wrap(payload.uuid, payload.name);
         let _browserWin = _win && _win.browserWindow;
         setOptOnBrowserWin('x', payload.left, _browserWin);
         setOptOnBrowserWin('y', payload.top, _browserWin);
@@ -2220,7 +1641,7 @@ function disabledFrameBoundsChangeDecorator(payload, args) {
 }
 
 function opacityChangedDecorator(payload, args) {
-    let _win = Window.wrap(payload.uuid, payload.name);
+    let _win = wrap(payload.uuid, payload.name);
     let _browserWin = _win && _win.browserWindow;
     setOptOnBrowserWin('opacity', args[1], _browserWin);
     return false;
@@ -2245,7 +1666,7 @@ function visibilityChangedDecorator(payload, args) {
                 coreState.setSentFirstHideSplashScreen(uuid, true);
             }
         } else {
-            let openfinWindow = Window.wrap(payload.uuid, payload.name);
+            let openfinWindow = wrap(payload.uuid, payload.name);
             const { hideReason } = openfinWindow;
             payload.type = 'hidden';
             payload.reason = hideReason === 'hide' && closing ? 'closing' : hideReason;
@@ -2450,7 +1871,7 @@ function handleCustomAlerts(id, opts) {
 
 //If unknown window AND `errDesc` provided, throw error; otherwise return (possibly undefined) browser window ref.
 function getElectronBrowserWindow(identity, errDesc) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
+    let openfinWindow = wrap(identity.uuid, identity.name);
     let browserWindow = openfinWindow && openfinWindow.browserWindow;
 
     if (errDesc && !browserWindow) {
@@ -2461,7 +1882,7 @@ function getElectronBrowserWindow(identity, errDesc) {
 }
 
 function restoreWindowPosition(identity, cb) {
-    Window.getBoundsFromDisk(identity, savedBounds => {
+    getBoundsFromDisk(identity, savedBounds => {
 
         const monitorInfo = System.getMonitorInfo();
 
@@ -2475,19 +1896,19 @@ function restoreWindowPosition(identity, cb) {
             savedBounds.left = displayRoot.x;
         }
 
-        Window.setBounds(identity, savedBounds.left, savedBounds.top, savedBounds.width, savedBounds.height);
+        setBounds(identity, savedBounds.left, savedBounds.top, savedBounds.width, savedBounds.height);
         switch (savedBounds.windowState) {
             case 'maximized':
-                Window.maximize(identity);
+                maximize(identity);
                 break;
             case 'minimized':
-                Window.minimize(identity);
+                minimize(identity);
                 break;
         }
 
         // set zoom level
         const { zoomLevel } = savedBounds;
-        Window.setZoomLevel(identity, zoomLevel);
+        setZoomLevel(identity, zoomLevel);
         cb();
     }, (err) => {
         //We care about errors but lets keep window creation going.

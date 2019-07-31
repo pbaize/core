@@ -1,5 +1,5 @@
-
-const { Window } = require('../../api/window');
+import * as Window from '../../api/window_actions';
+import {updateOptions, getOptions, showMenu as showWindowMenu} from '../../api/window';
 import {
     getGroupingWindowIdentity,
     getTargetWindowIdentity,
@@ -104,7 +104,7 @@ function updateWindowOptions(identity: Identity, rawMessage: APIMessage, ack: Ac
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.updateOptions(windowIdentity, payload.options);
+    updateOptions(windowIdentity, payload.options);
     ack(successAck);
 }
 
@@ -153,7 +153,7 @@ function showMenu(identity: Identity, message: APIMessage, ack: Acker): void {
     const { x, y, editable, hasSelectedText } = payload;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.showMenu(windowIdentity, x, y, editable, hasSelectedText);
+    showWindowMenu(windowIdentity, x, y, editable, hasSelectedText);
     ack(successAck);
 }
 
@@ -296,14 +296,14 @@ function getWindowOptions(identity: Identity, message: APIMessage, ack: Acker): 
     const dataAck = Object.assign({}, successAck);
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    dataAck.data = Window.getOptions(windowIdentity);
+    dataAck.data = getOptions(windowIdentity);
     ack(dataAck);
 }
 
 function getCurrentWindowOptions(identity: Identity, message: APIMessage, ack: Acker): void {
     const dataAck = Object.assign({}, successAck);
 
-    dataAck.data = Window.getOptions(identity);
+    dataAck.data = getOptions(identity);
     ack(dataAck);
 }
 

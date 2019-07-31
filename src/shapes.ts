@@ -65,8 +65,8 @@ export interface APIPayloadNack {
     reason?: string;
 }
 
-export type Acker = (payload: APIPayloadAck) => void;
-export type Nacker = (payload: APIPayloadNack) => void;
+export type Acker = (payload: APIPayloadAck | any) => void;
+export type Nacker = (payload: APIPayloadNack | Error | String) => void;
 export type NackerError = (payload: Error) => void;
 export type NackerErrorString = (payload: string) => void;
 
@@ -110,6 +110,7 @@ export interface WebOptions {
 export interface OpenFinWindow extends InjectableContext {
     isIframe?: boolean;
     parentFrameId?: number;
+    framePreloadScripts: { [name: string]: PreloadScriptState[]};
     _options: WindowOptions;
     _window: BrowserWindow;
     app_uuid: string;
@@ -324,7 +325,7 @@ export interface PreloadScript {
 }
 
 export interface PreloadScriptState extends PreloadScript {
-    state: 'load-started'|'load-failed'|'load-succeeded'|'failed'|'succeeded';
+    state?: 'load-started'|'load-failed'|'load-succeeded'|'failed'|'succeeded';
 }
 
 export interface EventPayload {

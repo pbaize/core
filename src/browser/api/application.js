@@ -19,8 +19,10 @@ let Tray = electron.Tray;
 let _ = require('underscore');
 
 // local modules
-let System = require('./system.js').System;
-import { Window } from './window';
+let SystemModule = require('./system');
+let System = SystemModule.System;
+import { create, wrap, getAbsolutePath } from './window';
+import { close as closeWindow, setZoomLevel, getZoomLevel } from './window_actions';
 let convertOpts = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
@@ -251,7 +253,7 @@ function closeChildWins(identity) {
             name: childWindow.name,
             uuid: childWindow.uuid
         };
-        Window.close(childWindowIdentity, true);
+        closeWindow(childWindowIdentity, true);
     });
 }
 
@@ -279,7 +281,7 @@ Application.close = function(identity, force, callback) {
             name: app._options.uuid,
             uuid: app._options.uuid
         };
-        Window.close(mainWindowIdentity, force, callback);
+        closeWindow(mainWindowIdentity, force, callback);
     }
 };
 Application.destroy = function(identity, ack, nack) {
@@ -344,7 +346,7 @@ Application.getZoomLevel = function(identity, callback) {
         throw new Error(appError);
     } else {
         const app = coreState.appByUuid(uuid);
-        Window.getZoomLevel(app.appObj.identity, callback);
+        getZoomLevel(app.appObj.identity, callback);
     }
 };
 
@@ -391,7 +393,7 @@ Application.getInfo = function(identity, callback) {
 Application.getWindow = function(identity) {
     let uuid = identity.uuid;
 
-    return Window.wrap(uuid, uuid);
+    return wrap(uuid, uuid);
 };
 
 Application.grantAccess = function() {
@@ -631,7 +633,7 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
     //for backwards compatibility main window needs to have name === uuid
     mainWindowOpts = Object.assign({}, mainWindowOpts, { name: uuid }); //avoid mutating original object
 
-    const win = Window.create(app.id, mainWindowOpts);
+    const win = create(app.id, mainWindowOpts);
     coreState.setWindowObj(app.id, win);
 
     // fire the connected once the main window's dom is ready
@@ -848,7 +850,7 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
 
     const mainWindowIdentity = app.identity;
 
-    iconUrl = Window.getAbsolutePath(mainWindowIdentity, iconUrl);
+    iconUrl = getAbsolutePath(mainWindowIdentity, iconUrl);
 
     cachedFetch(mainWindowIdentity, iconUrl, (error, iconFilepath) => {
         if (!error) {
@@ -923,7 +925,7 @@ Application.setZoomLevel = function(identity, level) {
                 name: childWindow.openfinWindow.name,
                 uuid: childWindow.openfinWindow.uuid
             };
-            Window.setZoomLevel(childWindowIdentity, level);
+            setZoomLevel(childWindowIdentity, level);
         });
     }
 };

@@ -50,7 +50,7 @@ declare namespace Electron {
         setUserMovementEnabled(enabled: boolean): void;
         setWindowPlacement(bounds: Rectangle): void;
         subscribeSessionNotifications(b: boolean): void;
-
+        setMessageObserver(message: string | number, hwnd: string): void;
         _eventsCount: number;
         _events: {
             blur: (() => void)[];

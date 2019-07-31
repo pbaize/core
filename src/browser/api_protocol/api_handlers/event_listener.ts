@@ -10,7 +10,7 @@ import { GlobalHotkey } from '../../api/global_hotkey';
 import { Identity as NoteIdentity } from '../../api/notifications/shapes';
 import { noop } from '../../../common/main';
 import { System } from '../../api/system';
-import { Window } from '../../api/window';
+import { addEventListener } from '../../api/window';
 import * as _ from 'underscore';
 import * as apiProtocolBase from './api_protocol_base';
 import ofEvents from '../../of_events';
@@ -48,7 +48,7 @@ const subWindow = async (identity: Identity, eventName: string, payload: EventPa
     const windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
     const targetUuid = windowIdentity.uuid;
     const islocalWindow = !!getWindowByUuidName(targetUuid, targetUuid);
-    const localUnsub = Window.addEventListener(identity, windowIdentity, eventName, listener);
+    const localUnsub = addEventListener(identity, windowIdentity, eventName, listener);
     const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
     let remoteUnSub = noop;
 

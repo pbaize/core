@@ -1,11 +1,12 @@
 
-import { Window } from './api/window';
+import { getOptions } from './api/window';
 import { cachedFetch } from './cached_resource_fetcher';
 import { normalizePreloadScripts } from './convert_options';
 import { Identity, PreloadScript } from '../shapes';
 import { readFile } from 'fs';
 import { writeToLog } from './log';
 import * as coreState from './core_state';
+import { setWindowPreloadState } from './api/window_actions';
 
 interface PreloadScriptWithContent extends PreloadScript {
     _content: string;
@@ -68,9 +69,9 @@ export async function loadScripts(identity: Identity): Promise<PreloadScriptWith
     let options;
     const frameInfo = coreState.getInfoByUuidFrame(identity);
     if (frameInfo && frameInfo.entityType === 'iframe') {
-        options = Window.getOptions({uuid: frameInfo.parent.uuid, name: frameInfo.parent.name});
+        options = getOptions({uuid: frameInfo.parent.uuid, name: frameInfo.parent.name});
     } else {
-        options = Window.getOptions(identity);
+        options = getOptions(identity);
     }
     const preloadScripts = normalizePreloadScripts(options);
     const promises = preloadScripts.map((preloadScript: PreloadScript) => loadScript(identity, preloadScript));
@@ -88,22 +89,22 @@ function loadScript(identity: Identity, preloadScript: PreloadScript): Promise<P
         };
 
         log(`Started loading preload script for URL [${url}]`);
-        Window.setWindowPreloadState(identity, {...preloadScript, state: 'load-started'});
+        setWindowPreloadState(identity, {...preloadScript, state: 'load-started'});
 
         if (!scriptPath) {
             log(`Failed loading preload script for URL [${url}]: preload script wasn't downloaded`);
-            Window.setWindowPreloadState(identity, {...preloadScript, state: 'load-failed'});
+            setWindowPreloadState(identity, {...preloadScript, state: 'load-failed'});
             return resolve({...preloadScript, _content: ''});
         }
 
         readFile(scriptPath, 'utf8', (readError: Error, data: string) => {
             if (readError) {
                 log(`Failed loading preload script for URL [${url}] from path [${scriptPath}]: ${readError}`);
-                Window.setWindowPreloadState(identity, {...preloadScript, state: 'load-failed'});
+                setWindowPreloadState(identity, {...preloadScript, state: 'load-failed'});
                 resolve({...preloadScript, _content: ''});
             } else {
                 log(`Succeeded loading preload script for URL [${url}] from path [${scriptPath}]`);
-                Window.setWindowPreloadState(identity, {...preloadScript, state: 'load-succeeded'});
+                setWindowPreloadState(identity, {...preloadScript, state: 'load-succeeded'});
                 resolve({...preloadScript, _content: data});
             }
         });

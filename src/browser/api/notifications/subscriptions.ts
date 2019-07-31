@@ -11,13 +11,14 @@ import {
 declare var require: any;
 
 const {System} = require('../system');
-const {Window} = require('../window');
+import * as Window from '../window_actions';
 const {Application} = require('../application');
 const {sendToIdentity} = require('../../api_protocol/api_handlers/api_protocol_base');
 import ofEvents from '../../of_events';
 const {writeToLog} = require('../../log');
 const _ = require('underscore');
 import route from '../../../common/route';
+import { wrap } from '../window';
 
 
 const NOTE_APP_UUID = 'service:notifications';
@@ -40,6 +41,7 @@ const NOTE_WIDTH_AND_PAD = NOTE_WIDTH + NOTE_PAD_RIGHT;
 const POSITION_ANIMATION_DURATION = 400;
 const NOTE_HEIGHT = 90;
 const NOTE_TOP_MARGIN = 70;
+const QUEUE_COUNTER_NAME: string = undefined;
 
 let askedFor = 0;
 let created = 0;
@@ -127,7 +129,7 @@ ofEvents.on(route.application('window-end-load', '*'), (e: any) => {
             try {
                 Window.close({
                     uuid,
-                    name: Window.QUEUE_COUNTER_NAME
+                    name: QUEUE_COUNTER_NAME
                 });
             } catch (e) {
                 writeToLog('info', e);
@@ -622,7 +624,7 @@ function windowIsValid(identity: any): boolean {
     let isValid: boolean;
 
     try {
-        const openfinWindow = Window.wrap(identity.uuid, identity.name);
+        const openfinWindow = wrap(identity.uuid, identity.name);
         const browserWindow = openfinWindow && openfinWindow.browserWindow;
 
         if (!browserWindow) {
