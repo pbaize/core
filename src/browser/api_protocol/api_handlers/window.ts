@@ -1,5 +1,5 @@
 
-const { Window } = require('../../api/window');
+import * as Window from '../../api/window';
 import {
     getGroupingWindowIdentity,
     getTargetWindowIdentity,
@@ -52,7 +52,6 @@ export const windowApiMap = {
     'move-window': moveWindow,
     'move-window-by': moveWindowBy,
     'register-window-name': registerWindowName,
-    'redirect-window-to-url': redirectWindowToUrl, // Deprecated
     'resize-window': resizeWindow,
     'resize-window-by': resizeWindowBy,
     'restore-window': restoreWindow,
@@ -90,15 +89,6 @@ function windowAuthenticate(identity: Identity, message: APIMessage, ack: Acker,
             nack(err); // TODO: this nack doesn't follow the protocol
         }
     });
-}
-
-function redirectWindowToUrl(identity: Identity, message: APIMessage, ack: Acker): void {
-    const { payload } = message;
-    const { targetUuid: uuid, targetName: name, url } = payload;
-    const windowIdentity = { uuid, name };
-
-    Window.navigate(windowIdentity, url);
-    ack(successAck);
 }
 
 function updateWindowOptions(identity: Identity, rawMessage: APIMessage, ack: Acker): void {
@@ -468,7 +458,7 @@ function centerWindow(identity: Identity, message: APIMessage, ack: Acker): void
     ack(successAck);
 }
 
-function getViews(identity: Identity, message: APIMessage, ack: Acker): void {
+function getViews(identity: Identity, message: APIMessage, ack: Acker) {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
     return Window.getViews(windowIdentity);

@@ -21,7 +21,8 @@ let _ = require('underscore');
 
 // local modules
 let System = require('./system.js').System;
-import { Window } from './window';
+import * as Window from './window';
+import { getZoomLevel, setZoomLevel } from './webcontents';
 let convertOpts = require('../convert_options.js');
 import * as coreState from '../core_state';
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
@@ -39,6 +40,7 @@ import { deregisterAllRuntimeProxyWindows } from '../window_groups_runtime_proxy
 import { releaseUuid } from '../uuid_availability';
 import { launch } from '../../../js-adapter/src/main';
 import { externalWindows } from './external_window';
+import { getElectronWebContents } from '../api_protocol/api_handlers/webcontents';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -351,7 +353,7 @@ Application.getZoomLevel = function(identity, callback) {
         throw new Error(appError);
     } else {
         const app = coreState.appByUuid(uuid);
-        Window.getZoomLevel(app.appObj.identity, callback);
+        getZoomLevel(getElectronWebContents(app.appObj.identity), callback);
     }
 };
 
@@ -956,7 +958,7 @@ Application.setZoomLevel = function(identity, level) {
                 name: childWindow.openfinWindow.name,
                 uuid: childWindow.openfinWindow.uuid
             };
-            Window.setZoomLevel(childWindowIdentity, level);
+            setZoomLevel(getElectronWebContents(childWindowIdentity), level);
         });
     }
 };
