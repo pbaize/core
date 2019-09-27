@@ -771,7 +771,7 @@ export interface RoutingInfo {
     frameRoutingId: number;
     mainFrameRoutingId: number;
     frameName: string;
-    _options: Shapes.WindowOptions;
+    _options: Shapes.WebOptions;
 }
 export function getRoutingInfoByUuidFrame(uuid: string, frame: string): RoutingInfo {
     const app = appByUuid(uuid);

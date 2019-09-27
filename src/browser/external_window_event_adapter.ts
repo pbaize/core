@@ -44,7 +44,7 @@ export default class ExternalWindowEventAdapter {
     private _leftButtonDown: boolean;
 
     // tslint:disable-next-line
-    constructor(browserWindow: Shapes.BrowserWindow | Shapes.ExternalWindow) {
+    constructor(browserWindow: Electron.BrowserWindow | Shapes.ExternalWindow) {
         const options = browserWindow && browserWindow._options;
         const uuid = options.uuid;
         const name = options.name;

@@ -58,6 +58,7 @@ export class RuntimeProxyWindow {
 
         browserwindow._options = proxyWindowOptions;
         this.window = {
+            hideOnCloseListener: null,
             _options : proxyWindowOptions,
             _window : <BrowserWindow>browserwindow,
             app_uuid: uuid,
@@ -72,6 +73,7 @@ export class RuntimeProxyWindow {
             preloadScripts: new Array<PreloadScript>(),
             framePreloadScripts: {},
             uuid,
+            isExternalWindow: () => false,
             isProxy: true
         };
         externalWindowsProxyList.set(windowKey, this);

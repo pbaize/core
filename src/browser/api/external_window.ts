@@ -103,7 +103,7 @@ export function getExternalWindowBounds(identity: Identity): Bounds {
 export function getExternalWindowGroup(identity: Identity): Shapes.GroupWindowIdentity[] {
   const externalWindow = getExternalWindow(identity);
   const windowGroup = WindowGroups.getGroup(externalWindow.groupUuid);
-  return windowGroup.map(({ name, uuid, isExternalWindow }) => ({ name, uuid, windowName: name, isExternalWindow }));
+  return windowGroup.map(({ name, uuid, isExternalWindow }) => ({ name, uuid, windowName: name, isExternalWindow: isExternalWindow() }));
 }
 
 export function getExternalWindowInfo(identity: Identity): Shapes.NativeWindowInfo {
@@ -550,7 +550,7 @@ function setAdditionalProperties(externalWindow: Shapes.ExternalWindow, properId
     uuid
   };
   externalWindow.browserWindow = externalWindow;
-  externalWindow.isExternalWindow = true;
+  externalWindow.isExternalWindow = () => true;
   externalWindow.app_uuid = uuid;
   externalWindow.name = name;
   externalWindow.uuid = uuid;

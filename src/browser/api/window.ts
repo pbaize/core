@@ -1,6 +1,3 @@
-/**
-    src/browser/api/window.js
- **/
 // build-in modules
 /* tslint:disable:typedef no-empty */
 const fs = require('fs');
@@ -130,12 +127,10 @@ function genWindowKey(identity: Identity) {
     return `${identity.uuid}-${identity.name}`;
 }
 
-/*
-    For the bounds stuff, looks like 5.0 does not take actions until the
-    window moves or has a resizing event. that is the same here. in the
-    future we can explicitly set them if, say, you are larger than a max
-    that you just set
-*/
+    // For the bounds stuff, looks like 5.0 does not take actions until the
+    // window moves or has a resizing event. that is the same here. in the
+    // future we can explicitly set them if, say, you are larger than a max
+    // that you just set
 const optionSetters = {
     contextMenu: (newVal: any, browserWin: BrowserWindow) => {
         // so old API still works
@@ -144,9 +139,9 @@ const optionSetters = {
     },
     contextMenuSettings: (newVal: any, browserWin: BrowserWindow) => {
         if (!newVal ||
-            (typeof newVal.enable !== 'undefined' && typeof newVal.enable !== 'boolean') ||
-            (typeof newVal.devtools !== 'undefined' && typeof newVal.devtools !== 'boolean') ||
-            (typeof newVal.reload !== 'undefined' && typeof newVal.reload !== 'boolean')) {
+            (newVal.enable !== undefined && typeof newVal.enable !== 'boolean') ||
+            (newVal.devtools !== undefined && typeof newVal.devtools !== 'boolean') ||
+            (newVal.reload !== undefined && typeof newVal.reload !== 'boolean')) {
             return;
         }
         const val = Object.assign({}, getOptFromBrowserWin('contextMenuSettings', browserWin),
@@ -232,7 +227,7 @@ const optionSetters = {
 
         const uuid = browserWin._options.uuid;
         const name = browserWin._options.name;
-        const openfinWindow = coreState.getWindowByUuidName(uuid, name) || {} as OpenFinWindow;
+        const openfinWindow = coreState.getWindowByUuidName(uuid, name) || <OpenFinWindow>{};
         const hideOnCloseListener = openfinWindow.hideOnCloseListener;
         const closeEventString = route.window('close-requested', uuid, name);
 
@@ -396,7 +391,7 @@ const optionSetters = {
     }
 };
 
-
+// tslint:disable-next-line:max-func-body-length
 export function create(id: number, opts: WindowOptions) {
     let name = opts.name;
     let uuid = opts.uuid;
@@ -409,7 +404,7 @@ export function create(id: number, opts: WindowOptions) {
     let winWebContents: Electron.WebContents;
     let _options: WindowOptions;
     let _boundsChangedHandler;
-    const groupUuid: number = null; // windows by default don't belong to any groups
+    const groupUuid = null; // windows by default don't belong to any groups
 
     const hideReason = 'hide';
     const hideOnCloseListener = () => {
@@ -500,7 +495,7 @@ export function create(id: number, opts: WindowOptions) {
         // once the window is closed, be sure to close all the children
         // it may have and remove it from the
         browserWindow.on('close', (event) => {
-            const ofWindow = coreState.getWindowByUuidName(uuid, name) || {} as OpenFinWindow;
+            const ofWindow = coreState.getWindowByUuidName(uuid, name) || <OpenFinWindow>{};
             const closeEventString = route.window('close-requested', uuid, name);
             const listenerCount = ofEvents.listenerCount(closeEventString);
 
@@ -568,7 +563,7 @@ export function create(id: number, opts: WindowOptions) {
 
                 // Show error box notifying the user of the crash
                 const message =
-                    `A crash occured in the renderer process of the ` +
+                    'A crash occured in the renderer process of the ' +
                     `application with the UUID "${uuid}"`;
                 const title = ERROR_TITLE_RENDERER_CRASH;
                 const type = ERROR_BOX_TYPES.RENDERER_CRASH;
@@ -591,7 +586,7 @@ export function create(id: number, opts: WindowOptions) {
                 const mappedMeta = eventMap[evnt];
                 const mappedTopic = mappedMeta.topic || '';
 
-                const electronEventListener = ( /*event , arg1, ... */) => {
+                const electronEventListener = () => {
 
                     // if the window has already been removed from core_state,
                     // don't propagate anymore events
@@ -607,7 +602,7 @@ export function create(id: number, opts: WindowOptions) {
                         name,
                         uuid,
                         topic: 'window',
-                        type: mappedTopic /* May be overridden by decorator */
+                        type: mappedTopic //May be overridden by decorator
                     };
 
                     const decoratorFn = mappedMeta.decorator || noOpDecorator;
@@ -651,7 +646,7 @@ export function create(id: number, opts: WindowOptions) {
         // Event listener for group changed
         const groupChangedEventString = 'group-changed';
         const groupChangedListener = (event) => {
-            const _win = coreState.getWindowByUuidName(uuid, name) || {} as OpenFinWindow;
+            const _win = coreState.getWindowByUuidName(uuid, name) || <OpenFinWindow>{};
             const _groupUuid = _win.groupUuid || null;
 
             //if the groupUuid's match or the _win object has no uuid (the window has closed)
@@ -659,9 +654,7 @@ export function create(id: number, opts: WindowOptions) {
                 const payload = event.payload;
 
                 payload.name = name;
-                /* jshint ignore:start */
                 payload.uuid = _win.app_uuid || event.uuid;
-                /* jshint ignore:end */
 
                 if (payload.reason === 'disband') {
                     payload.memberOf = 'nothing';
@@ -871,14 +864,13 @@ export function create(id: number, opts: WindowOptions) {
 
         forceClose: false,
 
-        /* jshint ignore:start */
 
         app_uuid: uuid, // this is a 5.0 requirement
 
-        /* jshint ignore:end */
 
         children: [],
         frames: new Map(),
+        isExternalWindow: () => false,
 
         // TODO this should be removed once it's safe in favor of the
         //      more descriptive browserWindow key
@@ -923,13 +915,12 @@ export function addEventListener(identity: Identity, targetIdentity: Identity, t
     let safeListener;
     let browserWinIsDead;
 
-    /*
-     for now, make a provision to auto-unhook if it fails to find
-     the browser window
+    //  for now, make a provision to auto-unhook if it fails to find
+    //  the browser window
 
-     TODO this needs to be added to the general unhook pipeline post
-     the identity problem getting solved
-     */
+    //  TODO this needs to be added to the general unhook pipeline post
+    //  the identity problem getting solved
+
     safeListener = (...args) => {
 
         try {
@@ -1032,7 +1023,7 @@ export function center(identity: Identity) {
 
 // TODO investigate the close sequence, there appears to be a case were you
 // try to wrap and close an already closed window
-export function close(identity: Identity, force: boolean, callback: (...args: any[]) => any = () => { }) {
+export function close(identity: Identity, force: boolean = false, callback: (...args: any[]) => any = () => { }) {
     const browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
@@ -1047,7 +1038,7 @@ export function close(identity: Identity, force: boolean, callback: (...args: an
     const defaultAction = () => {
         if (!browserWindow.isDestroyed()) {
             const openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name)
-                || {} as OpenFinWindow;
+                || <OpenFinWindow>{};
             openfinWindow.forceClose = true;
             browserWindow.close();
         }
@@ -1190,21 +1181,20 @@ export function getGroup(identity: Identity) {
         return [];
     }
 
-    const openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name) || {} as OpenFinWindow;
+    const openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name) || <OpenFinWindow>{};
     return WindowGroups.getGroup(openfinWindow.groupUuid);
 }
 
 
 export function getWindowInfo(identity: Identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'get info for');
-    const { preloadScripts } = coreState.getWindowByUuidName(identity.uuid, identity.name) || {} as OpenFinWindow;
+    const { preloadScripts } = coreState.getWindowByUuidName(identity.uuid, identity.name) || <OpenFinWindow>{};
     const windowKey = genWindowKey(identity);
     const isUserMovementEnabled = !disabledFrameRef.has(windowKey) || disabledFrameRef.get(windowKey) === 0;
-    const windowInfo = Object.assign({
+    return Object.assign({
         preloadScripts,
         isUserMovementEnabled
     }, WebContents.getInfo(browserWindow.webContents));
-    return windowInfo;
 }
 
 
@@ -1235,19 +1225,17 @@ export function getOptions(identity: Identity) {
 
 export function getParentWindow() { }
 
-export function getSnapshot(opts) {
-    return new Promise((resolve, reject) => {
+export async function getSnapshot(opts) {
         const { identity, payload: { area } } = opts;
         const browserWindow = getElectronBrowserWindow(identity);
 
         if (!browserWindow) {
-            const error = new Error(`Unknown window named '${identity.name}'`);
-            return reject(error);
+            throw new Error(`Unknown window named '${identity.name}'`);
         }
 
-        const callback = (img) => resolve(img.toPNG().toString('base64'));
+        const callback = (img) => img.toPNG().toString('base64');
 
-        if (typeof area === 'undefined') {
+        if (area === undefined) {
             // Snapshot of a full window
             return browserWindow.capturePage().then(callback);
         }
@@ -1259,13 +1247,11 @@ export function getSnapshot(opts) {
             typeof area.width !== 'number' ||
             typeof area.height !== 'number'
         ) {
-            const error = new Error(`Invalid shape of the snapshot's area.`);
-            return reject(error);
+            throw new Error('Invalid shape of the snapshot\'s area.');
         }
 
         // Snapshot of a specified area of the window
         return browserWindow.capturePage(<Electron.Rectangle>area).then(callback);
-    });
 }
 
 
@@ -1607,12 +1593,12 @@ export function updateOptions(identity: Identity, updateObj: Partial<WindowOptio
     const { uuid, name } = identity;
     const diff = {};
     const invalidOptions = [];
-    const clone = obj => typeof obj === 'undefined'
+    const clone = obj => obj === undefined
         ? obj
         : JSON.parse(JSON.stringify(obj)); // this works here, but has limitations; reuse with caution.
 
     try {
-        for (const opt in updateObj) {
+        Object.keys(updateObj).forEach(opt => {
 
             if (isOption(opt)) {
                 const oldVal = clone(getOptFromBrowserWin(opt, browserWindow));
@@ -1626,7 +1612,7 @@ export function updateOptions(identity: Identity, updateObj: Partial<WindowOptio
             } else {
                 invalidOptions.push(opt);
             }
-        }
+        });
 
         const options = browserWindow && clone(browserWindow._options);
         if (Object.keys(diff).length) {
@@ -2075,7 +2061,7 @@ function visibilityChangedDecorator(payload, args) {
                 coreState.setSentFirstHideSplashScreen(uuid, true);
             }
         } else {
-            const openfinWindow = coreState.getWindowByUuidName(payload.uuid, payload.name) || {} as OpenFinWindow;
+            const openfinWindow = coreState.getWindowByUuidName(payload.uuid, payload.name) || <OpenFinWindow>{};
             const { hideReason } = openfinWindow;
             payload.type = 'hidden';
             payload.reason = hideReason === 'hide' && closing ? 'closing' : hideReason;
@@ -2091,7 +2077,7 @@ function visibilityChangedDecorator(payload, args) {
 }
 
 
-function noOpDecorator( /*payload*/) {
+function noOpDecorator() {
 
     return true;
 }

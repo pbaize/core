@@ -113,11 +113,13 @@ export interface InjectableContext {
 }
 export interface WebOptions {
     preloadScripts?: PreloadScript[];
+    api?: any;
     uuid: string;
     name: string;
 }
 export interface OpenFinWindow extends InjectableContext {
     hideOnCloseListener: any;
+    isExternalWindow(): boolean;
     isIframe?: boolean;
     _options: WindowOptions;
     _window: BrowserWindow;
@@ -158,9 +160,9 @@ export type WebRequestHeaderConfig = {
 };
 
 export interface WindowOptions extends WebOptions {
-    customWindowAlert: boolean | AppObj;
-    _noregister: any;
-    permissions: any;
+    customWindowAlert?: boolean;
+    _noregister?: any;
+    permissions?: any;
     accelerator?: {
         devtools: boolean;
         reload: boolean;
@@ -345,7 +347,7 @@ export interface ElectronIpcChannels {
 }
 
 export interface WindowInitialOptionSet {
-    options: WindowOptions;
+    options: WebOptions;
     entityInfo: FrameInfo;
     enableChromiumBuild: boolean;
     socketServerState: PortInfo;
@@ -486,7 +488,7 @@ export interface NativeWindowInfo extends Omit<NativeWindowInfoElectron, 'proces
 export type NativeWindowInfoLite = (Pick<NativeWindowInfo, 'name'|'process'|'title'|'uuid'|'visible'>) & { nativeId: string };
 
 export type GroupWindow = (ExternalWindow | OpenFinWindow) & {
-    isExternalWindow?: boolean;
+    isExternalWindow: () => boolean;
 };
 
 export interface GroupWindowIdentity extends Identity {
