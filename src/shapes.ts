@@ -117,6 +117,7 @@ export interface WebOptions {
     name: string;
 }
 export interface OpenFinWindow extends InjectableContext {
+    hideOnCloseListener: any;
     isIframe?: boolean;
     _options: WindowOptions;
     _window: BrowserWindow;
@@ -127,12 +128,12 @@ export interface OpenFinWindow extends InjectableContext {
     groupUuid: string|null;
     hideReason: string;
     id: number;
+    preloadScripts: PreloadScript[];
     isProxy?: boolean;
 }
 
 export interface BrowserWindow extends BrowserWindowElectron {
     _options: WindowOptions;
-    setExternalWindowNativeId(hwnd: string): void;
 }
 
 export interface AppObj {
@@ -157,6 +158,9 @@ export type WebRequestHeaderConfig = {
 };
 
 export interface WindowOptions extends WebOptions {
+    customWindowAlert: boolean | AppObj;
+    _noregister: any;
+    permissions: any;
     accelerator?: {
         devtools: boolean;
         reload: boolean;
@@ -452,7 +456,6 @@ export interface ExternalWindow extends BrowserWindowElectron {
     app_uuid?: string;
     browserWindow: BrowserWindowMock;
     groupUuid?: string;
-    isExternalWindow: boolean;
     isProxy?: boolean;
     name: string;
     uuid: string;

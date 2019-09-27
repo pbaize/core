@@ -7,7 +7,7 @@ import { isURLAllowed } from '../common/main';
 
 const subscriptionManager = new SubscriptionManager();
 
-export function validateNavigation(webContents: any, identity: any, validator: () => any) {
+export function validateNavigation(webContents: any, identity: any, validator: (...args: any[]) => any) {
     const willNavigateString = 'will-navigate';
 
     webContents.on(willNavigateString, validator);

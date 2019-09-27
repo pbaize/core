@@ -26,7 +26,7 @@ interface ErrorPlainObject {
 }
 
 interface ErrorBox {
-    error: Error; // error printed to logs
+    error?: Error; // error printed to logs
     message?: string; // optional custom error message instead of error.stack
     title?: string; // optional blue error title
     type: string; // type of the error to add to window

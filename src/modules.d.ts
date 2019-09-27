@@ -1,3 +1,4 @@
+
 /**
  * All declared modules in this file don't correctly represent all of
  * their functionality, rather things are constantly added here while
@@ -35,11 +36,13 @@ declare namespace Electron {
         session: Session;
         registerIframe: (frameName: string, frameRoutingId: number) => void;
         unregisterIframe: (frameName: string, frameRoutingId: number) => void;
+        on(e: string, listener: (...args: any[]) => any);
+        updateContextMenuSettings(...args: any): any;
     }
 
     export interface BrowserWindow {
         nativeId: string;
-
+        isExternalWindow(): boolean;
         activate(): void;
         bringToFront(): any;
         forceExternalWindowClose(): void;
@@ -51,7 +54,11 @@ declare namespace Electron {
         setUserMovementEnabled(enabled: boolean): void;
         setWindowPlacement(bounds: Rectangle): void;
         subscribeSessionNotifications(b: boolean): void;
-
+        setAspectRatio(ratio: number): any;
+        setResizeSides(top: boolean, right: boolean, bottom: boolean, left: boolean): any;
+        setMessageObserver(WM_KEYDOWN: string | number, parentHwnd: any);
+        setExternalWindowNativeId(hwnd: string): void;
+        setHasFrame(frame: boolean): any;
         _eventsCount: number;
         _events: {
             blur: (() => void)[];
@@ -64,6 +71,7 @@ declare namespace Electron {
             unmaximize: (() => void)[];
             'visibility-changed': (() => void)[];
         };
+        _options: any;
     }
 
     export class ExternalWindow extends BrowserWindow { }

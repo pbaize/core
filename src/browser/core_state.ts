@@ -210,7 +210,7 @@ export function removeChildById(id: number): void {
     }
 }
 
-export function getChildrenByWinId(id: number): boolean|number[] {
+export function getChildrenByWinId(id: number): false|number[] {
     const win = getWinById(id);
     return win && win.children;
 }

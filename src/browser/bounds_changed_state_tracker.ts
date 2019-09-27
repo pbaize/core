@@ -79,7 +79,7 @@ interface DeferedEvent {
 
 export default class BoundsChangedStateTracker {
     private _listeners: any;
-    constructor(private uuid: string, private name: string, private browserWindow: BrowserWindow) {
+    constructor(private uuid: string, private name: string, private browserWindow: Electron.BrowserWindow) {
         this._listeners = {
             'begin-user-bounds-change': (): void => {
                 this.setUserBoundsChangeActive(true);

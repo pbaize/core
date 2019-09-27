@@ -42,7 +42,7 @@ export class WindowGroups extends EventEmitter {
 
     private _windowGroups: { [groupUuid: string]: { [windowName: string]: GroupWindow; } } = {};
 
-    public getGroup = (groupUuid: string): GroupWindow[] => {
+    public getGroup = (groupUuid?: string): GroupWindow[] => {
         return _.values(this._windowGroups[groupUuid]);
     };
 
