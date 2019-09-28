@@ -36,7 +36,7 @@ declare namespace Electron {
         session: Session;
         registerIframe: (frameName: string, frameRoutingId: number) => void;
         unregisterIframe: (frameName: string, frameRoutingId: number) => void;
-        on(e: string, listener: (...args: any[]) => any);
+        on(e: string, listener: (...args: any[]) => any): WebContents;
         updateContextMenuSettings(...args: any): any;
     }
 
@@ -56,7 +56,7 @@ declare namespace Electron {
         subscribeSessionNotifications(b: boolean): void;
         setAspectRatio(ratio: number): any;
         setResizeSides(top: boolean, right: boolean, bottom: boolean, left: boolean): any;
-        setMessageObserver(WM_KEYDOWN: string | number, parentHwnd: any);
+        setMessageObserver(WM_KEYDOWN: string | number, parentHwnd: any): any;
         setExternalWindowNativeId(hwnd: string): void;
         setHasFrame(frame: boolean): any;
         _eventsCount: number;

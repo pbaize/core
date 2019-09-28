@@ -19,6 +19,7 @@ import { ActionSpecMap } from '../shapes';
 import {hijackMovesForGroupedWindows} from './grouped_window_moves';
 import { argo } from '../../core_state';
 import { System } from '../../api/system';
+import { NackFunc } from '../transport_strategy/ack';
 
 const successAck: APIPayloadAck = { success: true };
 
@@ -431,7 +432,7 @@ function windowExists(identity: Identity, message: APIMessage, ack: Acker): void
     ack(dataAck);
 }
 
-function getCachedBounds(identity: Identity, message: APIMessage, ack: Acker, nack: Nacker): void {
+function getCachedBounds(identity: Identity, message: APIMessage, ack: Acker, nack: NackFunc): void {
     const { payload } = message;
     const dataAck = Object.assign({}, successAck);
     const windowIdentity = getTargetWindowIdentity(payload);

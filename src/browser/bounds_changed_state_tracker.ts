@@ -64,7 +64,7 @@ enum WindowState {
     Maximized = 'maximized',
     Minimized = 'minimized'
 }
-interface DeferedEvent {
+export interface DeferedEvent {
     changeType: number;
     reason: string;
     name: string;
