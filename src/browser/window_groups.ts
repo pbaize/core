@@ -133,7 +133,7 @@ export class WindowGroups extends EventEmitter {
 
     };
 
-    public leaveGroup = async (win: GroupWindow | false): Promise<void> => {
+    public leaveGroup = async (win: GroupWindow): Promise<void> => {
         const groupUuid = win && win.groupUuid;
 
         // cannot leave a group if you don't belong to one

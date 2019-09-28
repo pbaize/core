@@ -325,7 +325,7 @@ function getWindowGroup(identity: Identity, message: APIMessage, ack: Acker): vo
     // while the adaptor expects it to be 'windowName'
     dataAck.data = windowGroup.map(({ uuid, name, isExternalWindow }) => {
         if (crossApp === true) {
-            return { uuid, name, windowName: name, isExternalWindow };
+            return { uuid, name, windowName: name, isExternaLWindow: isExternalWindow() };
         } else {
             return name; // backwards compatible
         }

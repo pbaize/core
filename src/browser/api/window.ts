@@ -1295,12 +1295,12 @@ export function joinGroup(identity: Identity, grouping: Identity) {
 
 export function leaveGroup(identity: Identity) {
     const browserWindow = getElectronBrowserWindow(identity);
+    const openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
 
-    if (!browserWindow) {
+    if (!browserWindow || !openfinWindow) {
         return;
     }
 
-    const openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
     return WindowGroups.leaveGroup(openfinWindow);
 }
 

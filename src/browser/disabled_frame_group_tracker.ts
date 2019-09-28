@@ -14,7 +14,7 @@ import {release} from 'os';
 const isWin32 = process.platform === 'win32';
 const isWin10 = isWin32 && release().split('.')[0] === '10';
     // Use disabled frame bounds changing events for mac os and for external native windows
-const usesDisabledFrameEvents = (win: GroupWindow) => win.isExternalWindow || !isWin32;
+const usesDisabledFrameEvents = (win: GroupWindow) => win.isExternalWindow() || !isWin32;
 enum ChangeType {
     POSITION = 0,
     SIZE = 1,
@@ -26,7 +26,8 @@ const listenerCache: Map<WinId, Array<(...args: any[]) => void>> = new Map();
 export interface Move { ofWin: GroupWindow; rect: Rectangle; }
 
 async function raiseEvent(groupWindow: GroupWindow, topic: string, payload: Object) {
-    const { uuid, name, isProxy, isExternalWindow } = groupWindow;
+    const { uuid, name, isProxy } = groupWindow;
+    const isExternalWindow = groupWindow.isExternalWindow();
     const identity = { uuid, name };
     const eventName = isExternalWindow ? route.externalWindow(topic, uuid, name) : route.window(topic, uuid, name);
 
@@ -206,7 +207,7 @@ export function addWindowToGroup(win: GroupWindow) {
         // Emit expected events that aren't automatically emitted
         moved.forEach((movedWin) => {
             const isLeader = movedWin === win;
-            if (!isLeader || win.isExternalWindow) {
+            if (!isLeader || win.isExternalWindow()) {
                 // bounds-changed is emitted for the leader, but not other windows
                 emitChange('bounds-changed', movedWin, changeType, 'group');
             }
