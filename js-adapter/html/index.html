@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>OpenFin Template</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+    <body>
+        <div>
+            <p id="version-number-container">
+                Openfin version: <span id="of-version"></span>
+            </p>
+            <p id="identity-container">
+                Window Identity: <span id="win-identity"></span>
+            </p>
+        </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', async () => {
+                const ofVersion = document.querySelector('#of-version');
+                const winIdentity = document.querySelector('#win-identity');
+                const [version, win] = await Promise.all([fin.System.getVersion(), fin.Window.getCurrent()]);
+
+                ofVersion.innerText = version;
+                winIdentity.innerText = JSON.stringify(win.identity);
+            });
+        </script>
+    </body>
+</html>

@@ -1,0 +1,25 @@
+<html>
+<head>
+    <title>Service Provider</title>
+</head>
+<body>
+
+<h3>Service Provider</h3>
+
+<div id="result"></div>
+
+<script>
+    fin.desktop.main(async () => {
+        const provider = await fin.InterApplicationBus.Channel.create('test');
+        provider.register('test', (payload, id) => {
+            provider.dispatch(id, 'multi-runtime-test', 'return-mrt');
+            return 'return-test';
+        });    
+        provider.onConnection((id, payload) => {
+            console.log('connection', id);
+        });
+    });
+</script>
+
+</body>
+</html>

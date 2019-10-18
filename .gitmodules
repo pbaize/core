@@ -1,0 +1,4 @@
+[submodule "jsdoc-template"]
+	path = js-adapter/jsdoc-template
+	url = https://github.com/openfin/jsdoc-template.git
+	branch = master
